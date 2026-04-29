@@ -55,10 +55,10 @@ import {
     getConnectionType,
     checkAPIIntegration,
     hasSpecificIntegration,
-     } from './js/mzta-utils.js';
+} from './js/mzta-utils.js';
 import { taPromptUtils } from './js/mzta-utils-prompt.js';
 import { mzta_specialCommand } from './js/mzta-special-commands.js';
-import { 
+import {
     getSpamFilterPrompt,
     getSpecialPrompts
 } from './js/mzta-prompts.js';
@@ -71,11 +71,11 @@ import {
 
 browser.runtime.onInstalled.addListener(({ reason, previousVersion }) => {
     // console.log(">>>>>>>>>>> onInstalled: " + JSON.stringify(reason) + ", previousVersion: " + previousVersion);
-    if (reason === "install" 
-       || (reason === "update" && (previousVersion.startsWith("2.") || previousVersion.startsWith("1.")))
-       || (reason === "update" && ((previousVersion.startsWith("3.") && parseInt(previousVersion.split(".")[1]) <= 2)))
-       //|| (reason === "update") // only for testing
-       ) {
+    if (reason === "install"
+        || (reason === "update" && (previousVersion.startsWith("2.") || previousVersion.startsWith("1.")))
+        || (reason === "update" && ((previousVersion.startsWith("3.") && parseInt(previousVersion.split(".")[1]) <= 2)))
+        //|| (reason === "update") // only for testing
+    ) {
         browser.tabs.create({ url: "/pages/onboarding/onboarding.html" });
     }
 });
@@ -92,7 +92,7 @@ let _sparks_presence = false;
 let prefs_init = {};
 await reload_pref_init();
 
-let taLog = new taLogger("mzta-background",prefs_init.do_debug);
+let taLog = new taLogger("mzta-background", prefs_init.do_debug);
 taWorkingStatus.taLog = taLog;
 
 let special_prompts_ids = getActiveSpecialPromptsIDs({
@@ -102,10 +102,10 @@ let special_prompts_ids = getActiveSpecialPromptsIDs({
     get_calendar_event_from_clipboard: doGetSparkFeature(prefs_init.get_calendar_event_from_clipboard),
     get_task: doGetSparkFeature(prefs_init.get_task),
     is_chatgpt_web: (prefs_init.connection_type === "chatgpt_web")
-  });
+});
 
 browser.composeScripts.register({
-    js: [{file: "/js/mzta-compose-script.js"}]
+    js: [{ file: "/js/mzta-compose-script.js" }]
 });
 
 // Register the message display script for all newly opened message tabs.
@@ -115,9 +115,9 @@ messenger.messageDisplayScripts.register({
 
 browser.contentScripts.register({
     matches: ["https://*.chatgpt.com/*"],
-    js: [{file: "js/mzta-chatgpt-loader.js"}],
+    js: [{ file: "js/mzta-chatgpt-loader.js" }],
     runAt: "document_idle"
-  });
+});
 
 // Listen for shortcut command
 messenger.commands.onCommand.addListener((command, tab) => {
@@ -125,10 +125,10 @@ messenger.commands.onCommand.addListener((command, tab) => {
         handleShortcut(tab);
     }
 });
-    
+
 async function handleShortcut(tab) {
     taLog.log("Shortcut triggered!");
-    if(!["mail", "messageCompose","messageDisplay"].includes(tab.type)){
+    if (!["mail", "messageCompose", "messageDisplay"].includes(tab.type)) {
         return;
     }
     switch (tab.type) {
@@ -141,8 +141,30 @@ async function handleShortcut(tab) {
             break;
         default:
             break;
-    }    
+    }
 }
+
+// Listen for the "AI" toolbar button click — directly run Summarize
+browser.messageDisplayAction.onClicked.addListener(async (tab) => {
+    taLog.log("messageDisplayAction button clicked, running Summarize...");
+    let messageList;
+    if (tab.type === 'messageDisplay') {
+        const msg = await browser.messageDisplay.getDisplayedMessage(tab.id);
+        messageList = { messages: msg ? [msg] : [] };
+    } else {
+        // mail tab — may have multiple messages selected
+        messageList = await browser.mailTabs.getSelectedMessages();
+    }
+    if (!messageList || messageList.messages.length === 0) {
+        taLog.log("No messages selected for Summarize.");
+        return;
+    }
+    processEmails({
+        messages: getMessages(Promise.resolve(messageList)),
+        summarize: true
+    });
+});
+
 
 function preparePopupMenu(tab) {
     let output = {};
@@ -165,7 +187,7 @@ function preparePopupMenu(tab) {
 }
 
 async function _reload_menus() {
-    let prefs_reload = await browser.storage.sync.get({add_tags: prefs_default.add_tags, get_calendar_event: prefs_default.get_calendar_event, get_calendar_event_from_clipboard: prefs_default.get_calendar_event_from_clipboard, get_task: prefs_default.get_task, connection_type: prefs_default.connection_type});
+    let prefs_reload = await browser.storage.sync.get({ add_tags: prefs_default.add_tags, get_calendar_event: prefs_default.get_calendar_event, get_calendar_event_from_clipboard: prefs_default.get_calendar_event_from_clipboard, get_task: prefs_default.get_task, connection_type: prefs_default.connection_type });
     let getCalendarEvent = doGetSparkFeature(prefs_reload.get_calendar_event);
     let getCalendarEventFromClipboard = doGetSparkFeature(prefs_reload.get_calendar_event_from_clipboard);
     let getTask = doGetSparkFeature(prefs_reload.get_task);
@@ -176,7 +198,7 @@ async function _reload_menus() {
         get_calendar_event_from_clipboard: getCalendarEventFromClipboard,
         get_task: getTask,
         is_chatgpt_web: (prefs_reload.connection_type === "chatgpt_web")
-      });
+    });
     menus.reload(special_prompts_ids);
     taLog.log("Reloading menus");
     return true;
@@ -195,7 +217,7 @@ async function _assign_tags(_data, create_new_tags = true, exclusions_exact_matc
             checkExcludedTag(tag, exclusion, exclusions_exact_match)
         )
     );
-    if(!create_new_tags){
+    if (!create_new_tags) {
         taLog.log("Not creating new tags, only assigning existing ones...");
     }
     for (const tag of tags_final) {
@@ -213,37 +235,37 @@ async function _assign_tags(_data, create_new_tags = true, exclusions_exact_matc
 messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Check what type of message we have received and invoke the appropriate
     // handler function.
-    if (message && message.hasOwnProperty("command")){
+    if (message && message.hasOwnProperty("command")) {
         switch (message.command) {
             // case 'chatgpt_open':
             //         openChatGPT(message.prompt,message.action,message.tabId);
             //         return true;
             case 'chatgpt_close':
-                    async function _closeChatGptWindow(window_id) {
-                        let prefs_close = await browser.storage.sync.get({chatgpt_win_save_position: prefs_default.chatgpt_win_save_position});
-                        if(prefs_close.chatgpt_win_save_position){
-                            try {
-                                let winInfo = await browser.windows.get(window_id);
-                                await browser.storage.sync.set({chatgpt_win_top: winInfo.top, chatgpt_win_left: winInfo.left});
-                                taLog.log("Window position saved: top=" + winInfo.top + ", left=" + winInfo.left);
-                            } catch(e) {
-                                taLog.error("Error saving window position: " + e);
-                            }
+                async function _closeChatGptWindow(window_id) {
+                    let prefs_close = await browser.storage.sync.get({ chatgpt_win_save_position: prefs_default.chatgpt_win_save_position });
+                    if (prefs_close.chatgpt_win_save_position) {
+                        try {
+                            let winInfo = await browser.windows.get(window_id);
+                            await browser.storage.sync.set({ chatgpt_win_top: winInfo.top, chatgpt_win_left: winInfo.left });
+                            taLog.log("Window position saved: top=" + winInfo.top + ", left=" + winInfo.left);
+                        } catch (e) {
+                            taLog.error("Error saving window position: " + e);
                         }
-                        return browser.windows.remove(window_id).then(() => {
-                            taLog.log("ChatGPT window closed successfully.");
-                        }).catch((error) => {
-                            taLog.error("Error closing ChatGPT window:", error);
-                        });
                     }
-                    return _closeChatGptWindow(message.window_id);
+                    return browser.windows.remove(window_id).then(() => {
+                        taLog.log("ChatGPT window closed successfully.");
+                    }).catch((error) => {
+                        taLog.error("Error closing ChatGPT window:", error);
+                    });
+                }
+                return _closeChatGptWindow(message.window_id);
             case 'chatgpt_replaceSelectedText':
                 async function _replaceSelectedText(tabId, text) {
                     //console.log('chatgpt_replaceSelectedText: [' + tabId +'] ' + text)
                     taLog.log("chatgpt_replaceSelectedText text: " + text);
                     original_html = await getOriginalBody(tabId);
-                    let prefs_repl = await browser.storage.sync.get({composing_plain_text: prefs_default.composing_plain_text});
-                    if(prefs_repl.composing_plain_text){
+                    let prefs_repl = await browser.storage.sync.get({ composing_plain_text: prefs_default.composing_plain_text });
+                    if (prefs_repl.composing_plain_text) {
                         text = stripHtmlKeepLines(text);
                     }
                     await browser.tabs.sendMessage(tabId, { command: "replaceSelectedText", text: text, tabId: tabId });
@@ -255,8 +277,8 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     let paragraphsHtmlString = message.text;
                     //console.log(">>>>>>>>>>>> paragraphsHtmlString: " + paragraphsHtmlString);
                     taLog.log("paragraphsHtmlString: " + paragraphsHtmlString);
-                    let prefs_reply = await browser.storage.sync.get({reply_type: prefs_default.reply_type, composing_plain_text: prefs_default.composing_plain_text});
-                    if(prefs_reply.composing_plain_text){
+                    let prefs_reply = await browser.storage.sync.get({ reply_type: prefs_default.reply_type, composing_plain_text: prefs_default.composing_plain_text });
+                    if (prefs_reply.composing_plain_text) {
                         paragraphsHtmlString = stripHtmlKeepLines(paragraphsHtmlString);
                     }
                     //console.log('reply_type: ' + prefs_reply.reply_type);
@@ -265,7 +287,7 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     if (typeof message.replyType === "undefined" || message.replyType === null || message.replyType === "") {
                         message.replyType = prefs_reply.reply_type;
                     }
-                    if(message.replyType === 'reply_sender'){
+                    if (message.replyType === 'reply_sender') {
                         replyType = 'replyToSender';
                     }
                     taLog.log("Reply type: " + replyType);
@@ -286,29 +308,29 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         isPlainText: false,
                         identityId: curr_idn,
                     })
-                        // Wait for tab loaded.
-                        await new Promise(resolve => {
-                            const tabIsLoaded = tab => {
-                                return tab.status == "complete" && tab.url != "about:blank";
-                            };
-                            const listener = (tabId, changeInfo, updatedTab) => {
-                                if (tabIsLoaded(updatedTab)) {
-                                    browser.tabs.onUpdated.removeListener(listener);
-                                    //console.log(">>>>>>>>>>>> reply_tab: " + tabId);
-                                    resolve();
-                                }
-                            }
-                            // Early exit if loaded already
-                            if (tabIsLoaded(reply_tab)) {
+                    // Wait for tab loaded.
+                    await new Promise(resolve => {
+                        const tabIsLoaded = tab => {
+                            return tab.status == "complete" && tab.url != "about:blank";
+                        };
+                        const listener = (tabId, changeInfo, updatedTab) => {
+                            if (tabIsLoaded(updatedTab)) {
+                                browser.tabs.onUpdated.removeListener(listener);
+                                //console.log(">>>>>>>>>>>> reply_tab: " + tabId);
                                 resolve();
-                            } else {
-                                browser.tabs.onUpdated.addListener(listener);
                             }
-                        });
-                        // we need to wait for the compose windows to load the content script
-                        //setTimeout(() => browser.tabs.sendMessage(reply_tab.id, { command: "insertText", text: paragraphsHtmlString, tabId: reply_tab.id }), 500);
-                        setTimeout(async () => await replaceBody(reply_tab.id, paragraphsHtmlString), 500);
-                        return true;
+                        }
+                        // Early exit if loaded already
+                        if (tabIsLoaded(reply_tab)) {
+                            resolve();
+                        } else {
+                            browser.tabs.onUpdated.addListener(listener);
+                        }
+                    });
+                    // we need to wait for the compose windows to load the content script
+                    //setTimeout(() => browser.tabs.sendMessage(reply_tab.id, { command: "insertText", text: paragraphsHtmlString, tabId: reply_tab.id }), 500);
+                    setTimeout(async () => await replaceBody(reply_tab.id, paragraphsHtmlString), 500);
+                    return true;
                 }
                 return _replyMessage(message);
                 break;
@@ -331,7 +353,7 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
             case 'popup_menu_ready':
                 async function _popup_menu_ready() {
                     let tabs = await browser.tabs.query({ active: true, currentWindow: true });
-                    if(tabs.length == 0){
+                    if (tabs.length == 0) {
                         return false;
                     }
                     return preparePopupMenu(tabs[0]);
@@ -341,8 +363,8 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 break;
             case 'assign_tags':
                 async function _do_assign_tags(message) {
-                    let prefs_assign_tags = await browser.storage.sync.get({add_tags_exclusions_exact_match: prefs_default.add_tags_exclusions_exact_match});
-                    return _assign_tags(message,true, prefs_assign_tags.add_tags_exclusions_exact_match);
+                    let prefs_assign_tags = await browser.storage.sync.get({ add_tags_exclusions_exact_match: prefs_default.add_tags_exclusions_exact_match });
+                    return _assign_tags(message, true, prefs_assign_tags.add_tags_exclusions_exact_match);
                 }
                 return _do_assign_tags(message);
                 break;
@@ -350,7 +372,7 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 browser.tabs.sendMessage(message.tabId, { command: "api_send_custom_text", custom_text: message.custom_text });
                 break;
             case 'checkSpamReport':
-                if(!prefs_init.spamfilter_show_msg_panel){
+                if (!prefs_init.spamfilter_show_msg_panel) {
                     return;
                 }
 
@@ -402,10 +424,10 @@ async function openChatGPT(promptText, action, curr_tabId, prompt_name = '', do_
 
     taLog.log("Prompt length: " + promptText.length);
     let _max_prompt_length = prefs.max_prompt_length;
-    if(prefs.connection_type == 'chatgpt_web'){
+    if (prefs.connection_type == 'chatgpt_web') {
         _max_prompt_length = prefs_default.max_prompt_length;
     }
-    if((_max_prompt_length > 0) && (promptText.length > _max_prompt_length)){
+    if ((_max_prompt_length > 0) && (promptText.length > _max_prompt_length)) {
         // Prompt too long
         let tabs = await browser.tabs.query({ active: true, currentWindow: true });
         browser.tabs.sendMessage(curr_tabId, { command: "sendAlert", curr_tab_type: tabs[0].type, message: browser.i18n.getMessage('msg_prompt_too_long') });
@@ -414,378 +436,378 @@ async function openChatGPT(promptText, action, curr_tabId, prompt_name = '', do_
 
     let mailMessage = await browser.messageDisplay.getDisplayedMessage(curr_tabId);
 
-    switch(prefs.connection_type){
+    switch (prefs.connection_type) {
         case 'chatgpt_web':
-        {
-            // We are using the ChatGPT web interface
+            {
+                // We are using the ChatGPT web interface
 
-            let rand_call_id = '_chatgptweb_' + generateCallID();
-            let call_opt = '';
+                let rand_call_id = '_chatgptweb_' + generateCallID();
+                let call_opt = '';
 
-            let _wait_time = prefs.chatgpt_web_load_wait_time;
-            let _base_url = "https://chatgpt.com";
-            let _webproject_set = false;
-            let _custom_gpt_set = false;
-            let _use_prompt_info_custom_gpt = false;
-            prompt_info.chatgpt_web_model = typeof prompt_info.chatgpt_web_model === 'undefined' ? '' : prompt_info.chatgpt_web_model.trim();
-            prompt_info.chatgpt_web_project = typeof prompt_info.chatgpt_web_project === 'undefined' ? '' : prompt_info.chatgpt_web_project.trim();
-            prompt_info.chatgpt_web_custom_gpt = typeof prompt_info.chatgpt_web_custom_gpt === 'undefined' ? '' : prompt_info.chatgpt_web_custom_gpt.trim();
-            let _custom_model = sanitizeChatGPTModelData(prompt_info.chatgpt_web_model != '' ? prompt_info.chatgpt_web_model : prefs.chatgpt_web_model);
-            let _web_project = sanitizeChatGPTWebCustomData(prompt_info.chatgpt_web_project != '' ? prompt_info.chatgpt_web_project : prefs.chatgpt_web_project)
-            let _custom_gpt = sanitizeChatGPTWebCustomData(prompt_info.chatgpt_web_custom_gpt != '' ? prompt_info.chatgpt_web_custom_gpt : prefs.chatgpt_web_custom_gpt)
+                let _wait_time = prefs.chatgpt_web_load_wait_time;
+                let _base_url = "https://chatgpt.com";
+                let _webproject_set = false;
+                let _custom_gpt_set = false;
+                let _use_prompt_info_custom_gpt = false;
+                prompt_info.chatgpt_web_model = typeof prompt_info.chatgpt_web_model === 'undefined' ? '' : prompt_info.chatgpt_web_model.trim();
+                prompt_info.chatgpt_web_project = typeof prompt_info.chatgpt_web_project === 'undefined' ? '' : prompt_info.chatgpt_web_project.trim();
+                prompt_info.chatgpt_web_custom_gpt = typeof prompt_info.chatgpt_web_custom_gpt === 'undefined' ? '' : prompt_info.chatgpt_web_custom_gpt.trim();
+                let _custom_model = sanitizeChatGPTModelData(prompt_info.chatgpt_web_model != '' ? prompt_info.chatgpt_web_model : prefs.chatgpt_web_model);
+                let _web_project = sanitizeChatGPTWebCustomData(prompt_info.chatgpt_web_project != '' ? prompt_info.chatgpt_web_project : prefs.chatgpt_web_project)
+                let _custom_gpt = sanitizeChatGPTWebCustomData(prompt_info.chatgpt_web_custom_gpt != '' ? prompt_info.chatgpt_web_custom_gpt : prefs.chatgpt_web_custom_gpt)
 
-            if(prefs.chatgpt_web_tempchat){
-                call_opt += '&temporary-chat=true';
-            }
+                if (prefs.chatgpt_web_tempchat) {
+                    call_opt += '&temporary-chat=true';
+                }
 
-            if((prompt_info.chatgpt_web_model != '') || (prefs.chatgpt_web_model != '')){
-                call_opt += '&model=' + _custom_model;
-            }
+                if ((prompt_info.chatgpt_web_model != '') || (prefs.chatgpt_web_model != '')) {
+                    call_opt += '&model=' + _custom_model;
+                }
 
-            taLog.log("[chatgpt_web] call_opt: " + call_opt);
+                taLog.log("[chatgpt_web] call_opt: " + call_opt);
 
-            // If there is a custom gpt on the prompt, but also a web_project on the prefs, we need to use the custom gpt
-            _use_prompt_info_custom_gpt = (prompt_info.chatgpt_web_custom_gpt != '' && prompt_info.chatgpt_web_project == '');
+                // If there is a custom gpt on the prompt, but also a web_project on the prefs, we need to use the custom gpt
+                _use_prompt_info_custom_gpt = (prompt_info.chatgpt_web_custom_gpt != '' && prompt_info.chatgpt_web_project == '');
 
-            if(!_use_prompt_info_custom_gpt && ((prompt_info.chatgpt_web_project != '') || (prefs.chatgpt_web_project != ''))){
-                _base_url += _web_project;
-                _webproject_set = true;
-                _wait_time += 1000;
-            }
-            if(!_webproject_set && ((prompt_info.chatgpt_web_custom_gpt != '') || (prefs.chatgpt_web_custom_gpt != ''))){
-                _base_url += _custom_gpt;
-                _custom_gpt_set = true;
-            }
+                if (!_use_prompt_info_custom_gpt && ((prompt_info.chatgpt_web_project != '') || (prefs.chatgpt_web_project != ''))) {
+                    _base_url += _web_project;
+                    _webproject_set = true;
+                    _wait_time += 1000;
+                }
+                if (!_webproject_set && ((prompt_info.chatgpt_web_custom_gpt != '') || (prefs.chatgpt_web_custom_gpt != ''))) {
+                    _base_url += _custom_gpt;
+                    _custom_gpt_set = true;
+                }
 
-            let win_options = {
-                url: _base_url + "?call_id=" + rand_call_id + call_opt,
-                type: "popup",
-            }
-            
-            applyWindowPositionAndSize(win_options, prefs);
+                let win_options = {
+                    url: _base_url + "?call_id=" + rand_call_id + call_opt,
+                    type: "popup",
+                }
 
-            const listener = (message, sender, sendResponse) => {
-                async function handleChatGptWeb(createdTab) {
-                    taLog.log("ChatGPT web interface script started...");
+                applyWindowPositionAndSize(win_options, prefs);
 
-                    let _gpt_model = getGPTWebModelString(_custom_model);
+                const listener = (message, sender, sendResponse) => {
+                    async function handleChatGptWeb(createdTab) {
+                        taLog.log("ChatGPT web interface script started...");
 
-                    taLog.log("_custom_model: " + _custom_model);
-                    taLog.log("_gpt_model: " + _gpt_model);
+                        let _gpt_model = getGPTWebModelString(_custom_model);
 
-                    let originalText = prompt_info.selection_text;
-                    if((originalText == null) || (originalText == "")) {
-                        originalText = prompt_info.body_text;
-                    }
-                    let reply_type_pref = await browser.storage.sync.get({ reply_type: prefs_default.reply_type });
-                    //console.log(">>>>>>>>>> prompt_info: " + JSON.stringify(prompt_info));
-                    let pre_script = `let mztaWinId = `+ createdTab.windowId +`;
-                    let mztaStatusPageDesc="`+ browser.i18n.getMessage("prefs_status_page") +`";
-                    let mztaForceCompletionDesc="`+ browser.i18n.getMessage("chatgpt_force_completion") +`";
-                    let mztaForceCompletionTitle="`+ browser.i18n.getMessage("chatgpt_force_completion_title") +`";
-                    let mztaDoCustomText="`+ do_custom_text +`";
-                    let mztaPromptName="[`+ i18nConditionalGet(prompt_name) +`]";
-                    let mztaPhDefVal="`+(prefs.placeholders_use_default_value?'1':'0')+`";
-                    let mztaGPTModel="`+ (_custom_gpt_set ? '' : _gpt_model) +`";
-                    let mztaDoDebug="`+(prefs.do_debug?'1':'0')+`";
-                    let mztaUseDiffViewer="`+(prompt_info.use_diff_viewer=='1'?'1':'0')+`";
-                    let mztaOriginalText="`+ JSON.stringify(originalText).slice(1, -1) +`";
+                        taLog.log("_custom_model: " + _custom_model);
+                        taLog.log("_gpt_model: " + _gpt_model);
+
+                        let originalText = prompt_info.selection_text;
+                        if ((originalText == null) || (originalText == "")) {
+                            originalText = prompt_info.body_text;
+                        }
+                        let reply_type_pref = await browser.storage.sync.get({ reply_type: prefs_default.reply_type });
+                        //console.log(">>>>>>>>>> prompt_info: " + JSON.stringify(prompt_info));
+                        let pre_script = `let mztaWinId = ` + createdTab.windowId + `;
+                    let mztaStatusPageDesc="`+ browser.i18n.getMessage("prefs_status_page") + `";
+                    let mztaForceCompletionDesc="`+ browser.i18n.getMessage("chatgpt_force_completion") + `";
+                    let mztaForceCompletionTitle="`+ browser.i18n.getMessage("chatgpt_force_completion_title") + `";
+                    let mztaDoCustomText="`+ do_custom_text + `";
+                    let mztaPromptName="[`+ i18nConditionalGet(prompt_name) + `]";
+                    let mztaPhDefVal="`+ (prefs.placeholders_use_default_value ? '1' : '0') + `";
+                    let mztaGPTModel="`+ (_custom_gpt_set ? '' : _gpt_model) + `";
+                    let mztaDoDebug="`+ (prefs.do_debug ? '1' : '0') + `";
+                    let mztaUseDiffViewer="`+ (prompt_info.use_diff_viewer == '1' ? '1' : '0') + `";
+                    let mztaOriginalText="`+ JSON.stringify(originalText).slice(1, -1) + `";
                     let mztaReplyType="`+ reply_type_pref.reply_type + `";
                     `;
 
-                    taLog.log("pre_script: " + pre_script);
-                    taLog.log("Waiting " + _wait_time + " millisec");
-                    await new Promise(resolve => setTimeout(resolve, _wait_time));
-                    taLog.log("Waiting " + _wait_time + " millisec done");
-                    
-                    await browser.tabs.executeScript(createdTab.id, { code: pre_script + mzta_script, matchAboutBlank: false });
-                    // let mailMessage = await browser.messageDisplay.getDisplayedMessage(curr_tabId);
-                    let mailMessageId = -1;
-                    if(mailMessage) mailMessageId = mailMessage.id;
-                    promptText = convertNewlinesToParagraphs(promptText);
-                    browser.tabs.sendMessage(createdTab.id, { command: "chatgpt_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId, prompt_info: prompt_info});
-                    taLog.log('[ChatGPT Web] Connection succeded!');
-                    taLog.log("[ThunderAI] ChatGPT Web script injected successfully");
-                    browser.runtime.onMessage.removeListener(listener);
-                }
-            
-                if (message.command === "chatgpt_web_ready_" + rand_call_id) {
-                    return handleChatGptWeb(sender.tab)
-                }
-                return false;
-            }
+                        taLog.log("pre_script: " + pre_script);
+                        taLog.log("Waiting " + _wait_time + " millisec");
+                        await new Promise(resolve => setTimeout(resolve, _wait_time));
+                        taLog.log("Waiting " + _wait_time + " millisec done");
 
-            browser.runtime.onMessage.addListener(listener);
-            await browser.windows.create(win_options);
-        }
-        break;  // chatgpt_web - END
-
-        case 'chatgpt_api':
-        {
-         // We are using the ChatGPT API
-
-            let rand_call_id2 = '_openai_' + generateCallID();
-
-            const listener2 = (message, sender, sendResponse) => {
-
-                function handleChatGptApi(createdTab) {
-                    let mailMessageId2 = -1;
-                    if(mailMessage) mailMessageId2 = mailMessage.id;
-
-                    // check if the config is present, or give a message error
-                    if (prefs.chatgpt_api_key == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('chatgpt_empty_apikey')});
-                        return;
+                        await browser.tabs.executeScript(createdTab.id, { code: pre_script + mzta_script, matchAboutBlank: false });
+                        // let mailMessage = await browser.messageDisplay.getDisplayedMessage(curr_tabId);
+                        let mailMessageId = -1;
+                        if (mailMessage) mailMessageId = mailMessage.id;
+                        promptText = convertNewlinesToParagraphs(promptText);
+                        browser.tabs.sendMessage(createdTab.id, { command: "chatgpt_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId, prompt_info: prompt_info });
+                        taLog.log('[ChatGPT Web] Connection succeded!');
+                        taLog.log("[ThunderAI] ChatGPT Web script injected successfully");
+                        browser.runtime.onMessage.removeListener(listener);
                     }
-                    if (prefs.chatgpt_model == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('chatgpt_empty_model')});
-                        return;
+
+                    if (message.command === "chatgpt_web_ready_" + rand_call_id) {
+                        return handleChatGptWeb(sender.tab)
                     }
-                    //console.log(">>>>>>>>>> sender: " + JSON.stringify(sender));
-                    browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId2, do_custom_text: do_custom_text, prompt_info: prompt_info});
-                    taLog.log('[OpenAI ChatGPT] Connection succeded!');
-                    browser.runtime.onMessage.removeListener(listener2);
-                }
-
-                if (message.command === "chatgpt_api_ready_"+rand_call_id2) {
-                    return handleChatGptApi(sender.tab);
-                }
-                return false;
-            }
-
-            browser.runtime.onMessage.addListener(listener2);
-
-            let win_options2 = {
-                url: browser.runtime.getURL('api_webchat/index.html?llm='+prefs.connection_type+'&call_id='+rand_call_id2+'&ph_def_val='+(prefs.placeholders_use_default_value?'1':'0')+'&prompt_id='+encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
-                type: "popup",
-            }
-
-            applyWindowPositionAndSize(win_options2, prefs);
-
-            await browser.windows.create(win_options2);
-        }
-        break;  // chatgpt_api - END
-
-        case 'google_gemini_api':
-        {
-            // We are using the Google Gemini API
-
-            let rand_call_id5 = '_google_gemini_' + generateCallID();
-
-            const listener5 = (message, sender, sendResponse) => {
-
-                function handleChatGptApi(createdTab) {
-                    let mailMessageId5 = -1;
-                    if(mailMessage) mailMessageId5 = mailMessage.id;
-
-                    // check if the config is present, or give a message error
-                    if (prefs.google_gemini_api_key == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('google_gemini_empty_apikey')});
-                        return;
-                    }
-                    if (prefs.google_gemini_model == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('google_gemini_empty_model')});
-                        return;
-                    }
-                    //console.log(">>>>>>>>>> sender: " + JSON.stringify(sender));
-                    browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId5, do_custom_text: do_custom_text, prompt_info: prompt_info});
-                    taLog.log('[Google Gemini] Connection succeded!');
-                    browser.runtime.onMessage.removeListener(listener5);
-                }
-
-                if (message.command === "google_gemini_api_ready_"+rand_call_id5) {
-                    return handleChatGptApi(sender.tab);
-                }
-                return false;
-            }
-
-            browser.runtime.onMessage.addListener(listener5);
-
-            let win_options5 = {
-                url: browser.runtime.getURL('api_webchat/index.html?llm='+prefs.connection_type+'&call_id='+rand_call_id5+'&ph_def_val='+(prefs.placeholders_use_default_value?'1':'0')+'&prompt_id='+encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
-                type: "popup",
-            }
-
-            applyWindowPositionAndSize(win_options5, prefs);
-
-            await browser.windows.create(win_options5);
-        }
-        break;  // google_gemini_api - END
-
-        case 'ollama_api':
-        {
-             // We are using the Ollama API
-
-            taLog.log("Ollama API window opening...");
-
-            let rand_call_id3 = '_ollama_' + generateCallID();
-
-            const listener3 = (message, sender, sendResponse) => {
-
-                function handleOllamaApi(createdTab3) {
-                    taLog.log("Ollama API window ready.");
-                    taLog.log("message.window_id: " + message.window_id)
-                    taLog.log("createdTab3.id: " + createdTab3.id)
-                    // let mailMessage3 = await browser.messageDisplay.getDisplayedMessage(curr_tabId);
-                    let mailMessageId3 = -1;
-                    if(mailMessage) mailMessageId3 = mailMessage.id;
-                    taLog.log("mailMessageId3: " + mailMessageId3)
-            
-                    // check if the config is present, or give a message error
-                    if (prefs.ollama_host == '') {
-                        browser.tabs.sendMessage(createdTab3.id, { command: "api_error", error: browser.i18n.getMessage('ollama_empty_host')});
-                        return;
-                    }
-                    if (prefs.ollama_model == '') {
-                        browser.tabs.sendMessage(createdTab3.id, { command: "api_error", error: browser.i18n.getMessage('ollama_empty_model')});
-                        return;
-                    }
-                    browser.tabs.sendMessage(createdTab3.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId3, do_custom_text: do_custom_text, prompt_info: prompt_info});
-                    taLog.log('[Ollama API] Connection succeded!');
-                    browser.runtime.onMessage.removeListener(listener3);
-                }
-
-                if (message.command === "ollama_api_ready_"+rand_call_id3) {
-                    return handleOllamaApi(sender.tab);
-                }else{
                     return false;
                 }
+
+                browser.runtime.onMessage.addListener(listener);
+                await browser.windows.create(win_options);
             }
+            break;  // chatgpt_web - END
 
-            browser.runtime.onMessage.addListener(listener3);
+        case 'chatgpt_api':
+            {
+                // We are using the ChatGPT API
 
-            let win_options3 = {
-                url: browser.runtime.getURL('api_webchat/index.html?llm='+prefs.connection_type+'&call_id='+rand_call_id3+'&ph_def_val='+(prefs.placeholders_use_default_value?'1':'0')+'&prompt_id='+encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
-                type: "popup",
+                let rand_call_id2 = '_openai_' + generateCallID();
+
+                const listener2 = (message, sender, sendResponse) => {
+
+                    function handleChatGptApi(createdTab) {
+                        let mailMessageId2 = -1;
+                        if (mailMessage) mailMessageId2 = mailMessage.id;
+
+                        // check if the config is present, or give a message error
+                        if (prefs.chatgpt_api_key == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('chatgpt_empty_apikey') });
+                            return;
+                        }
+                        if (prefs.chatgpt_model == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('chatgpt_empty_model') });
+                            return;
+                        }
+                        //console.log(">>>>>>>>>> sender: " + JSON.stringify(sender));
+                        browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId2, do_custom_text: do_custom_text, prompt_info: prompt_info });
+                        taLog.log('[OpenAI ChatGPT] Connection succeded!');
+                        browser.runtime.onMessage.removeListener(listener2);
+                    }
+
+                    if (message.command === "chatgpt_api_ready_" + rand_call_id2) {
+                        return handleChatGptApi(sender.tab);
+                    }
+                    return false;
+                }
+
+                browser.runtime.onMessage.addListener(listener2);
+
+                let win_options2 = {
+                    url: browser.runtime.getURL('api_webchat/index.html?llm=' + prefs.connection_type + '&call_id=' + rand_call_id2 + '&ph_def_val=' + (prefs.placeholders_use_default_value ? '1' : '0') + '&prompt_id=' + encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
+                    type: "popup",
+                }
+
+                applyWindowPositionAndSize(win_options2, prefs);
+
+                await browser.windows.create(win_options2);
             }
+            break;  // chatgpt_api - END
 
-            applyWindowPositionAndSize(win_options3, prefs);
+        case 'google_gemini_api':
+            {
+                // We are using the Google Gemini API
 
-            await browser.windows.create(win_options3);
+                let rand_call_id5 = '_google_gemini_' + generateCallID();
 
-        }
-        break;  // ollama_api - END
+                const listener5 = (message, sender, sendResponse) => {
+
+                    function handleChatGptApi(createdTab) {
+                        let mailMessageId5 = -1;
+                        if (mailMessage) mailMessageId5 = mailMessage.id;
+
+                        // check if the config is present, or give a message error
+                        if (prefs.google_gemini_api_key == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('google_gemini_empty_apikey') });
+                            return;
+                        }
+                        if (prefs.google_gemini_model == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('google_gemini_empty_model') });
+                            return;
+                        }
+                        //console.log(">>>>>>>>>> sender: " + JSON.stringify(sender));
+                        browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId5, do_custom_text: do_custom_text, prompt_info: prompt_info });
+                        taLog.log('[Google Gemini] Connection succeded!');
+                        browser.runtime.onMessage.removeListener(listener5);
+                    }
+
+                    if (message.command === "google_gemini_api_ready_" + rand_call_id5) {
+                        return handleChatGptApi(sender.tab);
+                    }
+                    return false;
+                }
+
+                browser.runtime.onMessage.addListener(listener5);
+
+                let win_options5 = {
+                    url: browser.runtime.getURL('api_webchat/index.html?llm=' + prefs.connection_type + '&call_id=' + rand_call_id5 + '&ph_def_val=' + (prefs.placeholders_use_default_value ? '1' : '0') + '&prompt_id=' + encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
+                    type: "popup",
+                }
+
+                applyWindowPositionAndSize(win_options5, prefs);
+
+                await browser.windows.create(win_options5);
+            }
+            break;  // google_gemini_api - END
+
+        case 'ollama_api':
+            {
+                // We are using the Ollama API
+
+                taLog.log("Ollama API window opening...");
+
+                let rand_call_id3 = '_ollama_' + generateCallID();
+
+                const listener3 = (message, sender, sendResponse) => {
+
+                    function handleOllamaApi(createdTab3) {
+                        taLog.log("Ollama API window ready.");
+                        taLog.log("message.window_id: " + message.window_id)
+                        taLog.log("createdTab3.id: " + createdTab3.id)
+                        // let mailMessage3 = await browser.messageDisplay.getDisplayedMessage(curr_tabId);
+                        let mailMessageId3 = -1;
+                        if (mailMessage) mailMessageId3 = mailMessage.id;
+                        taLog.log("mailMessageId3: " + mailMessageId3)
+
+                        // check if the config is present, or give a message error
+                        if (prefs.ollama_host == '') {
+                            browser.tabs.sendMessage(createdTab3.id, { command: "api_error", error: browser.i18n.getMessage('ollama_empty_host') });
+                            return;
+                        }
+                        if (prefs.ollama_model == '') {
+                            browser.tabs.sendMessage(createdTab3.id, { command: "api_error", error: browser.i18n.getMessage('ollama_empty_model') });
+                            return;
+                        }
+                        browser.tabs.sendMessage(createdTab3.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId3, do_custom_text: do_custom_text, prompt_info: prompt_info });
+                        taLog.log('[Ollama API] Connection succeded!');
+                        browser.runtime.onMessage.removeListener(listener3);
+                    }
+
+                    if (message.command === "ollama_api_ready_" + rand_call_id3) {
+                        return handleOllamaApi(sender.tab);
+                    } else {
+                        return false;
+                    }
+                }
+
+                browser.runtime.onMessage.addListener(listener3);
+
+                let win_options3 = {
+                    url: browser.runtime.getURL('api_webchat/index.html?llm=' + prefs.connection_type + '&call_id=' + rand_call_id3 + '&ph_def_val=' + (prefs.placeholders_use_default_value ? '1' : '0') + '&prompt_id=' + encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
+                    type: "popup",
+                }
+
+                applyWindowPositionAndSize(win_options3, prefs);
+
+                await browser.windows.create(win_options3);
+
+            }
+            break;  // ollama_api - END
 
         case 'openai_comp_api':
-        {
-            // We are using the OpenAI Comp API
-    
-            let rand_call_id4 = '_openai_comp_api_' + generateCallID();
+            {
+                // We are using the OpenAI Comp API
 
-    
-            const listener4 = (message, sender, sendResponse) => {
+                let rand_call_id4 = '_openai_comp_api_' + generateCallID();
 
-                function handleOpenAICompApi(createdTab) {
-                    let mailMessageId4 = -1;
-                    if(mailMessage) mailMessageId4 = mailMessage.id;
-    
-                    // check if the config is present, or give a message error
-                    if (prefs.openai_comp_host == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('OpenAIComp_empty_host')});
-                        return;
+
+                const listener4 = (message, sender, sendResponse) => {
+
+                    function handleOpenAICompApi(createdTab) {
+                        let mailMessageId4 = -1;
+                        if (mailMessage) mailMessageId4 = mailMessage.id;
+
+                        // check if the config is present, or give a message error
+                        if (prefs.openai_comp_host == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('OpenAIComp_empty_host') });
+                            return;
+                        }
+                        if (prefs.openai_comp_model == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('OpenAIComp_empty_model') });
+                            return;
+                        }
+
+                        browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId4, do_custom_text: do_custom_text, prompt_info: prompt_info });
+                        taLog.log('[OpenAI Comp API] Connection succeded!');
+                        browser.runtime.onMessage.removeListener(listener4);
                     }
-                    if (prefs.openai_comp_model == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('OpenAIComp_empty_model')});
-                        return;
+
+                    if (message.command === "openai_comp_api_ready_" + rand_call_id4) {
+                        return handleOpenAICompApi(sender.tab);
                     }
-    
-                    browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId4, do_custom_text: do_custom_text, prompt_info: prompt_info});
-                    taLog.log('[OpenAI Comp API] Connection succeded!');
-                    browser.runtime.onMessage.removeListener(listener4);
+                    return false;
                 }
 
-                if (message.command === "openai_comp_api_ready_"+rand_call_id4) {
-                    return handleOpenAICompApi(sender.tab);
+                browser.runtime.onMessage.addListener(listener4);
+
+                let win_options4 = {
+                    url: browser.runtime.getURL('api_webchat/index.html?llm=' + prefs.connection_type + '&call_id=' + rand_call_id4 + '&ph_def_val=' + (prefs.placeholders_use_default_value ? '1' : '0') + '&prompt_id=' + encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
+                    type: "popup",
                 }
-                return false;
+
+                applyWindowPositionAndSize(win_options4, prefs);
+
+                await browser.windows.create(win_options4);
             }
-    
-            browser.runtime.onMessage.addListener(listener4);
-
-            let win_options4 = {
-                url: browser.runtime.getURL('api_webchat/index.html?llm='+prefs.connection_type+'&call_id='+rand_call_id4+'&ph_def_val='+(prefs.placeholders_use_default_value?'1':'0')+'&prompt_id='+encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
-                type: "popup",
-            }
-
-            applyWindowPositionAndSize(win_options4, prefs);
-
-            await browser.windows.create(win_options4);
-        }
-        break;  // openai_comp_api - END
+            break;  // openai_comp_api - END
 
         case 'anthropic_api':
-        {
-            // We are using the Anthropic API
+            {
+                // We are using the Anthropic API
 
-            let rand_call_id6 = '_anthropic_' + generateCallID();
+                let rand_call_id6 = '_anthropic_' + generateCallID();
 
-            const listener6 = (message, sender, sendResponse) => {
+                const listener6 = (message, sender, sendResponse) => {
 
-                function handleAnthropicApi(createdTab) {
-                    let mailMessageId6 = -1;
-                    if(mailMessage) mailMessageId6 = mailMessage.id;
+                    function handleAnthropicApi(createdTab) {
+                        let mailMessageId6 = -1;
+                        if (mailMessage) mailMessageId6 = mailMessage.id;
 
-                    // check if the config is present, or give a message error
-                    if (prefs.anthropic_api_key == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('anthropic_empty_apikey')});
-                        return;
+                        // check if the config is present, or give a message error
+                        if (prefs.anthropic_api_key == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('anthropic_empty_apikey') });
+                            return;
+                        }
+                        if (prefs.anthropic_model == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('anthropic_empty_model') });
+                            return;
+                        }
+                        if (prefs.anthropic_version == '') {
+                            browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('anthropic_empty_version') });
+                            return;
+                        }
+                        //console.log(">>>>>>>>>> sender: " + JSON.stringify(sender));
+                        browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId6, do_custom_text: do_custom_text, prompt_info: prompt_info });
+                        taLog.log('[OpenAI ChatGPT] Connection succeded!');
+                        browser.runtime.onMessage.removeListener(listener6);
                     }
-                    if (prefs.anthropic_model == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('anthropic_empty_model')});
-                        return;
+
+                    if (message.command === "anthropic_api_ready_" + rand_call_id6) {
+                        return handleAnthropicApi(sender.tab);
                     }
-                    if (prefs.anthropic_version == '') {
-                        browser.tabs.sendMessage(createdTab.id, { command: "api_error", error: browser.i18n.getMessage('anthropic_empty_version')});
-                        return;
-                    }
-                    //console.log(">>>>>>>>>> sender: " + JSON.stringify(sender));
-                    browser.tabs.sendMessage(createdTab.id, { command: "api_send", prompt: promptText, action: action, tabId: curr_tabId, mailMessageId: mailMessageId6, do_custom_text: do_custom_text, prompt_info: prompt_info});
-                    taLog.log('[OpenAI ChatGPT] Connection succeded!');
-                    browser.runtime.onMessage.removeListener(listener6);
+                    return false;
                 }
 
-                if (message.command === "anthropic_api_ready_"+rand_call_id6) {
-                    return handleAnthropicApi(sender.tab);
+                browser.runtime.onMessage.addListener(listener6);
+
+                let win_options6 = {
+                    url: browser.runtime.getURL('api_webchat/index.html?llm=' + prefs.connection_type + '&call_id=' + rand_call_id6 + '&ph_def_val=' + (prefs.placeholders_use_default_value ? '1' : '0') + '&prompt_id=' + encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
+                    type: "popup",
                 }
-                return false;
+
+                applyWindowPositionAndSize(win_options6, prefs);
+
+                await browser.windows.create(win_options6);
             }
-
-            browser.runtime.onMessage.addListener(listener6);
-
-            let win_options6 = {
-                url: browser.runtime.getURL('api_webchat/index.html?llm='+prefs.connection_type+'&call_id='+rand_call_id6+'&ph_def_val='+(prefs.placeholders_use_default_value?'1':'0')+'&prompt_id='+encodeURIComponent(prompt_info.id) + '&prompt_name=' + encodeURIComponent(i18nConditionalGet(prompt_info.name))),
-                type: "popup",
-            }
-
-            applyWindowPositionAndSize(win_options6, prefs);
-
-            await browser.windows.create(win_options6);
-        }
-        break;  // anthropic_api - END
+            break;  // anthropic_api - END
 
         default:
             taLog.error("Unknown API connection type: " + prefs.connection_type);
-        break;
+            break;
     }
 }
 
-function checkScreenDimensions(prefs){
+function checkScreenDimensions(prefs) {
     let width = window.screen.width - 50;
     let height = window.screen.height - 50;
 
-    if(prefs.chatgpt_win_height > height) prefs.chatgpt_win_height = height - 50;
-    if(prefs.chatgpt_win_width > width) prefs.chatgpt_win_width = width - 50;
+    if (prefs.chatgpt_win_height > height) prefs.chatgpt_win_height = height - 50;
+    if (prefs.chatgpt_win_width > width) prefs.chatgpt_win_width = width - 50;
 
     return prefs;
 }
 
-function applyWindowPositionAndSize(win_options, prefs){
-    if((prefs.chatgpt_win_width != '') && (prefs.chatgpt_win_height != '') && (prefs.chatgpt_win_width != 0) && (prefs.chatgpt_win_height != 0)){
+function applyWindowPositionAndSize(win_options, prefs) {
+    if ((prefs.chatgpt_win_width != '') && (prefs.chatgpt_win_height != '') && (prefs.chatgpt_win_width != 0) && (prefs.chatgpt_win_height != 0)) {
         win_options.width = prefs.chatgpt_win_width;
         win_options.height = prefs.chatgpt_win_height;
         taLog.log("Applying saved window dimensions: width=" + prefs.chatgpt_win_width + ", height=" + prefs.chatgpt_win_height);
     }
-    if((prefs.chatgpt_win_top != '') && (prefs.chatgpt_win_left != '')){
+    if ((prefs.chatgpt_win_top != '') && (prefs.chatgpt_win_left != '')) {
         win_options.top = prefs.chatgpt_win_top;
         win_options.left = prefs.chatgpt_win_left;
         taLog.log("Applying saved window position: top=" + prefs.chatgpt_win_top + ", left=" + prefs.chatgpt_win_left);
@@ -794,14 +816,14 @@ function applyWindowPositionAndSize(win_options, prefs){
 }
 
 function doGetSparkFeature(spark_feature_active) {
-    if(spark_feature_active) {
+    if (spark_feature_active) {
         return (_sparks_presence == 1);
     } else {
         return false;
     }
 }
 
-async function reload_pref_init(){
+async function reload_pref_init() {
     prefs_init = await browser.storage.sync.get({
         do_debug: prefs_default.do_debug,
         add_tags: prefs_default.add_tags,
@@ -843,7 +865,7 @@ function setupStorageChangeListener() {
                     get_calendar_event_from_clipboard: getCalendarEventFromClipboard,
                     get_task: getTask,
                     is_chatgpt_web: (prefs_init.connection_type === "chatgpt_web")
-                  });
+                });
                 menus.reload(special_prompts_ids);
             }
 
@@ -860,7 +882,7 @@ function setupStorageChangeListener() {
                     get_calendar_event_from_clipboard: getCalendarEventFromClipboard,
                     get_task: getTask,
                     is_chatgpt_web: (prefs_init.connection_type === "chatgpt_web")
-                  });                  
+                });
                 menus.reload(special_prompts_ids);
             }
 
@@ -877,7 +899,7 @@ function setupStorageChangeListener() {
                     get_calendar_event_from_clipboard: getCalendarEventFromClipboard,
                     get_task: getTask,
                     is_chatgpt_web: (prefs_init.connection_type === "chatgpt_web")
-                  });                  
+                });
                 menus.reload(special_prompts_ids);
             }
 
@@ -894,7 +916,7 @@ function setupStorageChangeListener() {
                     get_calendar_event_from_clipboard: getCalendarEventFromClipboard,
                     get_task: getTask,
                     is_chatgpt_web: (prefs_init.connection_type === "chatgpt_web")
-                  });                  
+                });
                 menus.reload(special_prompts_ids);
             }
 
@@ -911,7 +933,7 @@ function setupStorageChangeListener() {
                     get_calendar_event_from_clipboard: getCalendarEventFromClipboard,
                     get_task: getTask,
                     is_chatgpt_web: (newConnectionType === "chatgpt_web")
-                  });                  
+                });
                 menus.reload(special_prompts_ids);
             }
 
@@ -932,12 +954,12 @@ function setupPermissionsRemovedListener() {
         // Process 'tags' permissions removal
         if (["messagesTags", "messagesUpdate"].some(permission => permissions.permissions.includes(permission))) {
             // console.log(">>>>>>>>>>> Permissions onRemoved: tags");
-            browser.storage.sync.set({add_tags: false});
+            browser.storage.sync.set({ add_tags: false });
         }
         // Process 'spamfilter' permissions removal
         if (["messagesMove", "messagesUpdate"].some(permission => permissions.permissions.includes(permission))) {
             // console.log(">>>>>>>>>>> Permissions onRemoved: spamfilter");
-            browser.storage.sync.set({spamfilter: false});
+            browser.storage.sync.set({ spamfilter: false });
         }
     });
 }
@@ -971,21 +993,21 @@ function addContextMenuItems() {
     let itemsToAdd = [];
 
     // Add Context menu: Add tags
-    if(prefs_init.add_tags && checkAPIIntegration(prefs_init.connection_type, prefs_init.add_tags_use_specific_integration,prefs_init.add_tags_connection_type)){
+    if (prefs_init.add_tags && checkAPIIntegration(prefs_init.connection_type, prefs_init.add_tags_use_specific_integration, prefs_init.add_tags_connection_type)) {
         itemsToAdd.push(contextMenuID_AddTags);
     } else {
         removeContextMenu(contextMenuID_AddTags);
     }
 
     // Add Context menu: Spamfilter
-    if(prefs_init.spamfilter && checkAPIIntegration(prefs_init.connection_type, prefs_init.spamfilter_use_specific_integration,prefs_init.spamfilter_connection_type)){
+    if (prefs_init.spamfilter && checkAPIIntegration(prefs_init.connection_type, prefs_init.spamfilter_use_specific_integration, prefs_init.spamfilter_connection_type)) {
         itemsToAdd.push(contextMenuID_Spamfilter);
     } else {
         removeContextMenu(contextMenuID_Spamfilter);
     }
-    
+
     // Add Context menu: Summarize
-    if(prefs_init.summarize && checkAPIIntegration(prefs_init.connection_type, prefs_init.summarize_use_specific_integration, prefs_init.summarize_connection_type)) {
+    if (prefs_init.summarize && checkAPIIntegration(prefs_init.connection_type, prefs_init.summarize_use_specific_integration, prefs_init.summarize_connection_type)) {
         itemsToAdd.push(contextMenuID_Summarize);
     } else {
         removeContextMenu(contextMenuID_Summarize);
@@ -1005,20 +1027,20 @@ function addContextMenuItems() {
 addContextMenuItems();
 
 // Listen for context menu item clicks
-browser.menus.onClicked.addListener( (info, tab) => {
+browser.menus.onClicked.addListener((info, tab) => {
     let _add_tags = false
     let _spamfilter = false
     let _summarize = false;
-    if(info.menuItemId === contextMenuID_AddTags){
+    if (info.menuItemId === contextMenuID_AddTags) {
         _add_tags = true;
     }
-    if(info.menuItemId === contextMenuID_Spamfilter){
+    if (info.menuItemId === contextMenuID_Spamfilter) {
         _spamfilter = true;
     }
-    if(info.menuItemId === contextMenuID_Summarize) {
+    if (info.menuItemId === contextMenuID_Summarize) {
         _summarize = true;
     }
-    if(_add_tags || _spamfilter || _summarize){
+    if (_add_tags || _spamfilter || _summarize) {
         processEmails({
             messages: getMessages(info.selectedMessages),
             addTagsAuto: _add_tags,
@@ -1032,14 +1054,14 @@ browser.menus.onClicked.addListener( (info, tab) => {
 // Listening for new received emails
 const newEmailListener = (folder, messagesList) => {
 
-    if(!_process_incoming){
+    if (!_process_incoming) {
         return;
     }
 
     taLog.log("New mail received");
     taLog.log(`Folder: ${folder.name}`);
 
-    async function _newEmailListener(){
+    async function _newEmailListener() {
         let messages = getMessages(messagesList);
 
         taSpamReport.logger = taLog;
@@ -1052,7 +1074,7 @@ const newEmailListener = (folder, messagesList) => {
             spamFilter: prefs_init.spamfilter
         });
 
-        if(prefs_init.spamfilter){
+        if (prefs_init.spamfilter) {
             taSpamReport.truncReportData();
         }
     }
@@ -1110,22 +1132,22 @@ async function processEmails(args) {
             let curr_fullMessage = null;
             let msg_text = null;
             let body_text = '';
-    
+
             if (addTagsAuto || spamFilter) {
                 curr_fullMessage = await browser.messages.getFull(message.id);
                 msg_text = await getMailBody(curr_fullMessage);
                 taLog.log("Starting from the HTML body if present and converting to plain text...");
                 body_text = htmlBodyToPlainText(msg_text.html);
-                if( body_text.length == 0 ){
+                if (body_text.length == 0) {
                     taLog.log("No HTML found in the message body, using plain text...");
                     body_text = msg_text.text.replace(/\s+/g, ' ').trim();
                 }
             }
-    
+
             if (addTagsAuto) {
-                if(prefs_aats.add_tags_enabled_accounts.length > 0){
+                if (prefs_aats.add_tags_enabled_accounts.length > 0) {
                     let accountId = message.folder.accountId;
-                    if(!prefs_aats.add_tags_enabled_accounts.includes(accountId)){
+                    if (!prefs_aats.add_tags_enabled_accounts.includes(accountId)) {
                         taLog.log("Account " + accountId + " not enabled for add_tags, skipping...");
                         continue;
                     }
@@ -1166,11 +1188,11 @@ async function processEmails(args) {
                 let _data = { messageId: message.id, tags: tags_current_email };
                 _assign_tags(_data, !prefs_aats.add_tags_auto_force_existing, prefs_aats.add_tags_exclusions_exact_match);
             }
-    
+
             if (spamFilter) {
-                if(prefs_aats.spamfilter_enabled_accounts.length > 0){
+                if (prefs_aats.spamfilter_enabled_accounts.length > 0) {
                     let accountId = message.folder.accountId;
-                    if(!prefs_aats.spamfilter_enabled_accounts.includes(accountId)){
+                    if (!prefs_aats.spamfilter_enabled_accounts.includes(accountId)) {
                         taLog.log("Account " + accountId + " not enabled for spamfilter, skipping...");
                         continue;
                     }
@@ -1178,7 +1200,7 @@ async function processEmails(args) {
 
                 await taSpamReport.removeReportData(message.headerMessageId);
                 await taSpamReport.setProcessing(message.headerMessageId);
-                
+
                 await updateSpamPanel(message.headerMessageId, "showSpamCheckInProgress");
 
                 let curr_prompt_spamfilter = await getSpamFilterPrompt();
@@ -1224,7 +1246,7 @@ async function processEmails(args) {
                     continue;
                 }
                 taLog.log("SpamFilter jsonObj: " + JSON.stringify(jsonObj));
-    
+
                 let report_data = {};
                 report_data.report_date = new Date();
                 report_data.headerMessageId = message.headerMessageId;
@@ -1235,7 +1257,7 @@ async function processEmails(args) {
                 report_data.message_date = new Date(message.date);
                 report_data.moved = false;
                 report_data.SpamThreshold = prefs_init.spamfilter_threshold;
-    
+
                 if (jsonObj.spamValue >= prefs_init.spamfilter_threshold) {
                     taLog.log("Marking as spam [" + message.headerMessageId + "]");
                     messenger.messages.update(message.id, { junk: true });
@@ -1244,9 +1266,9 @@ async function processEmails(args) {
                     report_data.moved = true;
                     taLog.log("Marked as spam [" + message.headerMessageId + "]");
                 }
-    
+
                 taSpamReport.saveReportData(report_data, message.headerMessageId);
-    
+
                 // Check if the message is currently displayed and update the banner
                 await updateSpamPanel(message.headerMessageId, "showSpamReport", report_data);
             }
@@ -1260,10 +1282,10 @@ async function processEmails(args) {
         const prompt = specialPrompts.find((prompt) => prompt.id === 'prompt_summarize');
         const prompt_email = specialPrompts.find((prompt) => prompt.id === 'prompt_summarize_email_template');
         const prompt_email_separator = specialPrompts.find((prompt) => prompt.id === 'prompt_summarize_email_separator');
-        
+
         const tabs = await browser.tabs.query({ active: true, currentWindow: true });
         const chatgpt_lang = await taPromptUtils.getDefaultLang(prompt);
-    
+
         // replace placeholders in the prompts the assignment prompt and email
         // separator prompt do not have a message as context, so there is only
         // limited things to replace
@@ -1275,39 +1297,39 @@ async function processEmails(args) {
             curr_prompt: prompt_email_separator,
             chatgpt_lang: chatgpt_lang,
         });
-    
-        
+
+
         // assemble all email messages into one string and add the assignment prompt
         const messages_list = [];
         for await (let curr_message of messages) {
-          
+
             // extract body of current message as text
             const curr_message_full = await browser.messages.getFull(curr_message.id);
             const curr_body_full_html = await getMailBody(curr_message_full);
             let curr_body_full_text = htmlBodyToPlainText(curr_body_full_html.html);
-            if( curr_body_full_text.length === 0) {
+            if (curr_body_full_text.length === 0) {
                 taLog.log("No HTML found in the message body, using plain text...");
                 curr_body_full_text = curr_message_full.text;
             }
-            
+
             messages_list.push(await taPromptUtils.preparePrompt({
-              curr_prompt: prompt_email,
-              curr_message: curr_message,
-              chatgpt_lang: chatgpt_lang,
-              body_text: curr_body_full_text,
-              subject_text: curr_message_full.headers.subject,
-              msg_text: curr_body_full_html,
+                curr_prompt: prompt_email,
+                curr_message: curr_message,
+                chatgpt_lang: chatgpt_lang,
+                body_text: curr_body_full_text,
+                subject_text: curr_message_full.headers.subject,
+                msg_text: curr_body_full_html,
             }));
         };
         const messages_string = messages_list.join(prompt_email_separator_string);
-        
+
         const full_prompt = prompt_string + prompt_email_separator_string + messages_string;
-        
+
         // console.log(full_prompt);
-        
+
         // send the prompt to the chat interface
         openChatGPT(
-            full_prompt, 
+            full_prompt,
             prompt.action,
             tabs[0].id,
             prompt.name,
@@ -1327,7 +1349,7 @@ let messageTabs = openTabs.filter(
     tab => ["mail", "messageDisplay"].includes(tab.type)
 );
 for (let messageTab of messageTabs) {
-    if((messageTab.url == undefined) || (["start.thunderbird.net","about:blank"].some(blockedUrl => messageTab.url.includes(blockedUrl)))) {
+    if ((messageTab.url == undefined) || (["start.thunderbird.net", "about:blank"].some(blockedUrl => messageTab.url.includes(blockedUrl)))) {
         continue;
     }
     try {

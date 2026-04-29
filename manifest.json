@@ -12,9 +12,8 @@
         }
     },
     "message_display_action": {
-        "default_title": "__MSG_menu_title__",
-        "default_icon": "images/icon-32px.png",
-        "default_popup": "popup/mzta-popup.html"
+        "default_title": "Summarize",
+        "default_icon": "images/icon-32px.png"
     },
     "compose_action": {
         "default_title": "__MSG_menu_title__",

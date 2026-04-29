@@ -196,25 +196,27 @@ if (worker) {
             return messages;
         };
 
-        let additional_text_elements = [];
-        additional_text_elements.push({label: browser.i18n.getMessage("prompt_string"), value: '[' + prompt_id + '] ' + decodeURIComponent(prompt_name)});
-        additional_text_elements.push(...getAdditionalMessages(integration, prefs_api));
+        if (prompt_id !== 'prompt_summarize') {
+            let additional_text_elements = [];
+            additional_text_elements.push({label: browser.i18n.getMessage("prompt_string"), value: '[' + prompt_id + '] ' + decodeURIComponent(prompt_name)});
+            additional_text_elements.push(...getAdditionalMessages(integration, prefs_api));
 
-        const api_strings = {
-            chatgpt: "ChatGPT API",
-            google_gemini: "Google Gemini API",
-            ollama: "Ollama API",
-            openai_comp: "OpenAI Compatible API",
-            anthropic: "Claude API"
-        };
-        
-        messagesArea.appendUserMessage(getAPIsInitMessageString({
-            api_string: api_strings[integration],
-            model_string: prefs_api[`${integration_prefix}_model`],
-            host_string: prefs_api[`${integration_prefix}_host`],
-            version_string: prefs_api[`${integration_prefix}_version`],
-            additional_messages: additional_text_elements
-        }), "info");
+            const api_strings = {
+                chatgpt: "ChatGPT API",
+                google_gemini: "Google Gemini API",
+                ollama: "Ollama API",
+                openai_comp: "OpenAI Compatible API",
+                anthropic: "Claude API"
+            };
+
+            messagesArea.appendUserMessage(getAPIsInitMessageString({
+                api_string: api_strings[integration],
+                model_string: prefs_api[`${integration_prefix}_model`],
+                host_string: prefs_api[`${integration_prefix}_host`],
+                version_string: prefs_api[`${integration_prefix}_version`],
+                additional_messages: additional_text_elements
+            }), "info");
+        }
         
         //console.log(`>>>>>>>>>>>>> command: ${llm}_ready_${call_id}`,)
 

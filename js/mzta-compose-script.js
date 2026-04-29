@@ -23,6 +23,8 @@
 const MZTA_INJECTED_SELECTORS = [
   '#mzta-spam-check-progress',
   '#mzta-spam-report-banner',
+  '#mzta-auto-summary-banner',
+  '#mzta-auto-summary-progress',
   '.mzta_dialog',
 ];
 
@@ -747,6 +749,71 @@ switch (message.command) {
 
     document.body.insertBefore(container, document.body.firstChild);
     return Promise.resolve(true);
+
+  case "showAutoSummaryProgress": {
+      if(document.getElementById('mzta-auto-summary-progress')) return Promise.resolve(true);
+
+      const containerProgress = document.createElement('div');
+      containerProgress.id = 'mzta-auto-summary-progress';
+      containerProgress.style.cssText = `background-color: #333; color: yellow; border-bottom: 1px solid #555; padding: 8px 12px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; display: flex; align-items: center; gap: 15px; width: 100%; box-sizing: border-box;`;
+
+      const textProgress = document.createElement('strong');
+      textProgress.textContent = "Summarizing message...";
+      
+      const loadingImg = document.createElement('img');
+      loadingImg.src = browser.runtime.getURL("/images/loading.gif");
+      loadingImg.style.cssText = "height: 16px; width: 16px;";
+
+      containerProgress.appendChild(loadingImg);
+      containerProgress.appendChild(textProgress);
+
+      document.body.insertBefore(containerProgress, document.body.firstChild);
+      return Promise.resolve(true);
+  }
+
+  case "removeAutoSummaryProgress": {
+      const progress = document.getElementById('mzta-auto-summary-progress');
+      if (progress) progress.remove();
+      return Promise.resolve(true);
+  }
+
+  case "showAutoSummary": {
+      const summary = message.summary;
+      if(document.getElementById('mzta-auto-summary-progress')) {
+          document.getElementById('mzta-auto-summary-progress').remove();
+      }
+      if(document.getElementById('mzta-auto-summary-banner')) {
+          document.getElementById('mzta-auto-summary-banner').remove();
+      }
+
+      const container = document.createElement('div');
+      container.id = 'mzta-auto-summary-banner';
+      
+      container.style.cssText = `background-color: #333; color: yellow; border-bottom: 1px solid #555; padding: 10px 15px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; display: flex; align-items: start; gap: 15px; width: 100%; box-sizing: border-box;`;
+
+      const title = document.createElement('strong');
+      title.textContent = "AI Summary:";
+      title.style.whiteSpace = "nowrap";
+      
+      const content = document.createElement('span');
+      content.textContent = summary;
+      content.style.flex = "1";
+      content.style.whiteSpace = "pre-wrap";
+
+      const closeBtn = document.createElement('span');
+      closeBtn.textContent = '×';
+      closeBtn.style.cssText = 'cursor: pointer; font-weight: bold; font-size: 16px; padding: 0 5px;';
+      closeBtn.onclick = function() {
+          container.remove();
+      };
+
+      container.appendChild(title);
+      container.appendChild(content);
+      container.appendChild(closeBtn);
+
+      document.body.insertBefore(container, document.body.firstChild);
+      return Promise.resolve(true);
+  }
 
   default:
     // do nothing

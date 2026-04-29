@@ -84,7 +84,7 @@ export function getDynamicSettingsDefaults(keysFilter = []) {
     special_prompts_with_integration.forEach(prefix => {
         const keys = keysFilter.length > 0 ? keysFilter : Object.keys(integration_settings_template);
         keys.forEach(key => {
-             defaults[`${prefix}_${key}`] = prefs_default[`${prefix}_${key}`];
+            defaults[`${prefix}_${key}`] = prefs_default[`${prefix}_${key}`];
         });
     });
     return defaults;

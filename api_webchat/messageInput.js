@@ -313,12 +313,12 @@ class MessageInput extends HTMLElement {
 
     _handleKeyDown(event) {
         if (event.key === 'Enter') {
-            this._handleNewChatMessage();
+            this._handleNewChatMessage(false);
         }
     }
 
     _handleClick() {
-        this._handleNewChatMessage();
+        this._handleNewChatMessage(false);
     }
 
     _handleStopClick() {
@@ -327,7 +327,7 @@ class MessageInput extends HTMLElement {
         this._stopButton.title = browser.i18n.getMessage("apiwebchat_stopping") +  '...';
     }
 
-    _handleNewChatMessage() {
+    _handleNewChatMessage(hidePrompt = true) {
         //do nothing if input is empty
         if ((!this._messageInputField.value)||(this._messageInputField.value.trim().length === 0)) {
             return;
@@ -340,7 +340,7 @@ class MessageInput extends HTMLElement {
         this._messageInputField.setAttribute('disabled', 'disabled');
         let messageContent = this._messageInputField.value;
         this._messageInputField.value = '';
-        if (this.messagesAreaComponent) {
+        if (!hidePrompt && this.messagesAreaComponent) {
             this.messagesAreaComponent.appendUserMessage(messageContent);
         }
         this.setStatusMessage(browser.i18n.getMessage('WaitingServerResponse') + '...');

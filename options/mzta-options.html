@@ -1,266 +1,291 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="stylesheet" href="mzta-options.css">
-    <link rel="stylesheet" href="../pages/_lib/connection-ui.css">
-  </head>
-  <body>
-    <div id="miczRelNotes"><a href="mzta-release-notes.html">__MSG_prefs_OptionText_release_notes__</a></div>
-    <div id="miczStatusPage" class="conntype_chatgpt_web"><a href="https://micz.it/thunderbird-addon-thunderai/status/">__MSG_prefs_status_page__</a></div>
-    <table id="miczPrefs">
-      <tr id="mzta_top_msg">
-        <td>
-          <div>
-            __MSG_prefs_SurveyLinkText__<br>
-            <a href="https://forms.gle/1qK2wcbuhaRzhwyt9">__MSG_prefs_SurveyLinkText2__</a>
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="mzta-options.css">
+  <link rel="stylesheet" href="../pages/_lib/connection-ui.css">
+</head>
+
+<body>
+  <div id="miczRelNotes"><a href="mzta-release-notes.html">__MSG_prefs_OptionText_release_notes__</a></div>
+  <div id="miczStatusPage" class="conntype_chatgpt_web"><a
+      href="https://micz.it/thunderbird-addon-thunderai/status/">__MSG_prefs_status_page__</a></div>
+  <table id="miczPrefs">
+    <tr id="mzta_top_msg">
+      <td>
+        <div>
+          __MSG_prefs_SurveyLinkText__<br>
+          <a href="https://forms.gle/1qK2wcbuhaRzhwyt9">__MSG_prefs_SurveyLinkText2__</a>
+        </div>
+      </td>
+      <td>
+        <div id="mzta_doc_block">
+          <span class="doc_title">__MSG_prefs_doc_title__</span>
+          <div class="doc_links">
+            <a id="link_doc_guides" href="#">__MSG_prefs_doc_setup_guide__</a>
+            <a id="link_doc_tutorial" href="#">__MSG_prefs_doc_custom_prompt_tutorial__</a>
           </div>
-        </td>
-        <td>
-          <div id="mzta_doc_block">
-            <span class="doc_title">__MSG_prefs_doc_title__</span>
-            <div class="doc_links">
-              <a id="link_doc_guides" href="#">__MSG_prefs_doc_setup_guide__</a>
-              <a id="link_doc_tutorial" href="#">__MSG_prefs_doc_custom_prompt_tutorial__</a>
-            </div>
-            <div class="doc_welcome">
-              <a href="#" id="btn_welcome">__MSG_prefs_doc_open_welcome__</a>
-            </div>
+          <div class="doc_welcome">
+            <a href="#" id="btn_welcome">__MSG_prefs_doc_open_welcome__</a>
           </div>
-        </td>
-      </tr>
-      <tr id="thstats">
-        <td colspan="2">
-          <div>__MSG_prefs_THStats_1__ <a href="https://addons.thunderbird.net/it/thunderbird/addon/thunderstats/">__MSG_prefs_THStats_2__ <img src="/images/thunderstats.png"></a></div>
-        </td>
-      </tr>
-      <tr id="owl_warning">
-        <td colspan="2"><div class="warning">__MSG_prefs_OptionText_owl_warning__ <a href="https://micz.it/thunderbird-addon-thunderai/owl/">__MSG_more_info_string__</a></div></td>
-      </tr>
-      <tr id="hyprland_warning">
-        <td colspan="2" style="text-align:center;" class="warning"><b>__MSG_hyprland_warning__</b></td>
-      </tr>
-      <tr>
-        <td class="nb"><span class="opt_title">__MSG_prefs_OptionText_chatgpt_win_text__</span>
-        <td class="nb">
-          <label>
-            <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_height__</span>
-            <input type="number" id="chatgpt_win_height" name="chatgpt_win_height" class="option-input win_prop" />
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td class="nt"><i>__MSG_prefs_OptionText_chatgpt_win_dims_info__</i></td>
-        <td class="nt">
-          <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_width__</span>
-          <input type="number" id="chatgpt_win_width" name="chatgpt_win_width" class="option-input win_prop" />
-        </td>
-      </tr>
-      <tr>
-        <td class="nb"><span class="opt_title">__MSG_prefs_OptionText_chatgpt_win_pos_text__</span>
-        <td class="nb">
-          <label>
-            <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_top__</span>
-            <input type="number" id="chatgpt_win_top" name="chatgpt_win_top" class="option-input win_prop" />
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td class="nt nb"><i>__MSG_prefs_chatgpt_win_position_info__</td>
-        <td class="nt nb">
-          <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_left__</span>
-          <input type="number" id="chatgpt_win_left" name="chatgpt_win_left" class="option-input win_prop" />
-        </td>
-      </tr>
-      <tr>
-        <td class="nt">&nbsp;</td>
-        <td class="nt">
-          <input type="checkbox" id="chatgpt_win_save_position" name="chatgpt_win_save_position" class="option-input" />
-          __MSG_prefs_chatgpt_win_save_position__
-        </td>
-      </tr>
-      <tr>
-        <td><label>
+        </div>
+      </td>
+    </tr>
+    <tr id="thstats">
+      <td colspan="2">
+        <div>__MSG_prefs_THStats_1__ <a
+            href="https://addons.thunderbird.net/it/thunderbird/addon/thunderstats/">__MSG_prefs_THStats_2__ <img
+              src="/images/thunderstats.png"></a></div>
+      </td>
+    </tr>
+    <tr id="owl_warning">
+      <td colspan="2">
+        <div class="warning">__MSG_prefs_OptionText_owl_warning__ <a
+            href="https://micz.it/thunderbird-addon-thunderai/owl/">__MSG_more_info_string__</a></div>
+      </td>
+    </tr>
+    <tr id="hyprland_warning">
+      <td colspan="2" style="text-align:center;" class="warning"><b>__MSG_hyprland_warning__</b></td>
+    </tr>
+    <tr>
+      <td class="nb"><span class="opt_title">__MSG_prefs_OptionText_chatgpt_win_text__</span>
+      <td class="nb">
+        <label>
+          <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_height__</span>
+          <input type="number" id="chatgpt_win_height" name="chatgpt_win_height" class="option-input win_prop" />
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td class="nt"><i>__MSG_prefs_OptionText_chatgpt_win_dims_info__</i></td>
+      <td class="nt">
+        <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_width__</span>
+        <input type="number" id="chatgpt_win_width" name="chatgpt_win_width" class="option-input win_prop" />
+      </td>
+    </tr>
+    <tr>
+      <td class="nb"><span class="opt_title">__MSG_prefs_OptionText_chatgpt_win_pos_text__</span>
+      <td class="nb">
+        <label>
+          <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_top__</span>
+          <input type="number" id="chatgpt_win_top" name="chatgpt_win_top" class="option-input win_prop" />
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td class="nt nb"><i>__MSG_prefs_chatgpt_win_position_info__</td>
+      <td class="nt nb">
+        <span class="dims_label">__MSG_prefs_OptionText_chatgpt_win_left__</span>
+        <input type="number" id="chatgpt_win_left" name="chatgpt_win_left" class="option-input win_prop" />
+      </td>
+    </tr>
+    <tr>
+      <td class="nt">&nbsp;</td>
+      <td class="nt">
+        <input type="checkbox" id="chatgpt_win_save_position" name="chatgpt_win_save_position" class="option-input" />
+        __MSG_prefs_chatgpt_win_save_position__
+      </td>
+    </tr>
+    <tr>
+      <td><label>
           <span class="opt_title">__MSG_prefs_OptionText_default_sign_name__</span>
         </label></td>
-        <td>
-          <label>
-            <input type="text" id="default_sign_name" name="default_sign_name" class="option-input" />
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td><label>
+      <td>
+        <label>
+          <input type="text" id="default_sign_name" name="default_sign_name" class="option-input" />
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td><label>
           <span class="opt_title">__MSG_prefs_OptionText_default_chatgpt_lang__</span>
         </label></td>
-        <td>
-          <label>
-            <input type="text" id="default_chatgpt_lang" name="default_chatgpt_lang" class="option-input" />
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          <label>
-            <span class="opt_title">__MSG_prefs_OptionText_reply_type__</span>
-          </label>
-        </td>
-        <td>
-          <label>
-            <select id="reply_type" name="reply_type" class="option-input">
-              <option value="reply_all">__MSG_prefs_OptionText_reply_all__</option>
-              <option value="reply_sender">__MSG_prefs_OptionText_reply_sender__</option>
-            </select>
-            <br>__MSG_prefs_OptionText_reply_type_info__
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td><label>
+      <td>
+        <label>
+          <input type="text" id="default_chatgpt_lang" name="default_chatgpt_lang" class="option-input" />
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label>
+          <span class="opt_title">__MSG_prefs_OptionText_reply_type__</span>
+        </label>
+      </td>
+      <td>
+        <label>
+          <select id="reply_type" name="reply_type" class="option-input">
+            <option value="reply_all">__MSG_prefs_OptionText_reply_all__</option>
+            <option value="reply_sender">__MSG_prefs_OptionText_reply_sender__</option>
+          </select>
+          <br>__MSG_prefs_OptionText_reply_type_info__
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td><label>
           <span class="opt_title">__MSG_prefs_OptionText_dynamic_menu_order_alphabet__</span>
         </label></td>
-        <td>
-          <label>
-            <input type="checkbox" id="dynamic_menu_order_alphabet" name="dynamic_menu_order_alphabet" class="option-input" />
-            &nbsp;<span>__MSG_prefs_OptionText_dynamic_menu_order_alphabet_info__</span>
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td><label>
+      <td>
+        <label>
+          <input type="checkbox" id="dynamic_menu_order_alphabet" name="dynamic_menu_order_alphabet"
+            class="option-input" />
+          &nbsp;<span>__MSG_prefs_OptionText_dynamic_menu_order_alphabet_info__</span>
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td><label>
           <span class="opt_title">__MSG_prefs_OptionText_dynamic_menu_force_enter__</span>
         </label></td>
-        <td>
-          <label>
-            <input type="checkbox" id="dynamic_menu_force_enter" name="dynamic_menu_force_enter" class="option-input" />
-            &nbsp;<span>__MSG_prefs_OptionText_dynamic_menu_force_enter_info__</span>
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td><label>
+      <td>
+        <label>
+          <input type="checkbox" id="dynamic_menu_force_enter" name="dynamic_menu_force_enter" class="option-input" />
+          &nbsp;<span>__MSG_prefs_OptionText_dynamic_menu_force_enter_info__</span>
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td><label>
           <span class="opt_title">__MSG_prefs_OptionText_placeholders_use_default_value__</span>
         </label></td>
-        <td>
-          <label>
-            <input type="checkbox" id="placeholders_use_default_value" name="placeholders_use_default_value" class="option-input" />
-            &nbsp;<span>__MSG_prefs_OptionText_placeholders_use_default_value_info__</span>
-          </label>
-        </td>
-      </tr>
-      <tr>
-        <td><label>
+      <td>
+        <label>
+          <input type="checkbox" id="placeholders_use_default_value" name="placeholders_use_default_value"
+            class="option-input" />
+          &nbsp;<span>__MSG_prefs_OptionText_placeholders_use_default_value_info__</span>
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td><label>
           <span class="opt_title">__MSG_prefs_OptionText_composing_plain_text__</span>
         </label></td>
-        <td>
-          <label>
-            <input type="checkbox" id="composing_plain_text" name="composing_plain_text" class="option-input" />
-            &nbsp;<span>__MSG_prefs_OptionText_composing_plain_text_info__</span>
-          </label>
-        </td>
-      </tr>
-      <tr id="connection_ui_anchor"></tr>
-      <tr id="max_prompt_length_tr">
-        <td><span class="opt_title">__MSG_prefs_OptionText_max_prompt_length__</span></td>
-        <td>
-          <label>
-            <input type="number" id="max_prompt_length" name="max_prompt_length" class="option-input" />
-            <button type="button" id="reset_max_prompt_length" class="btn_small" style="margin-left:0.5em;">__MSG_reset_default__</button>
-            <br>__MSG_prefs_OptionText_max_prompt_length_Info__
-          </label>
-        </td>
-      </tr>
-      <tr class="add_tags_tr">
-        <td><span class="opt_title">__MSG_prefs_OptionText_add_tags__</span>
-        <br><button id="btnManageTagsInfo" class="btn_small">__MSG_prefs_OptionText_btnManageTagsInfo__</button></td>
-        <td>
-          <label>
-            <input type="checkbox" id="add_tags" name="add_tags" class="option-input" />
-            __MSG_prefs_OptionText_add_tags_Info__
-            <br><span class="warn_API_needed" id="add_tags_warn_API_needed">__MSG_warn_API_needed__</span>
-          </label>
-        </td>
-      </tr>
-      <tr class="spamfilter_tr">
-        <td><span class="opt_title">__MSG_prefs_OptionText_spamfilter__</span>
-        <br><button id="btnManageSpamFilterInfo" class="btn_small">__MSG_prefs_OptionText_btnManageSpamFilterInfo__</button></td>
-        <td>
-          <label>
-            <input type="checkbox" id="spamfilter" name="spamfilter" class="option-input" />
-            __MSG_prefs_OptionText_spamfilter_Info__
-            <br><span class="warn_API_needed" id="spamfilter_warn_API_needed">__MSG_warn_API_needed__</span>
-          </label>
-        </td>
-      </tr>
-      <tr class="summarize_tr">
-        <td><span class="opt_title">__MSG_prefs_OptionText_summarize__</span>
-        <br><button id="btnManageSummarizeInfo" class="btn_small">__MSG_prefs_OptionText_btnManageSummarizeInfo__</button></td>
-        <td>
-          <label>
-            <input type="checkbox" id="summarize" name="summarize" class="option-input" />
-            __MSG_prefs_OptionText_summarize_Info__
-            <br><span class="warn_API_needed" id="summarize_warn_API_needed">__MSG_warn_API_needed__</span>
-          </label>
-        </td>
-      </tr>
-      <tr class="get_calendar_event_tr">
-        <td><span class="opt_title">__MSG_prefs_OptionText_get_calendar_event__</span>
-        <br><button id="btnManageCalendarEventInfo" class="btn_small">__MSG_prefs_OptionText_btnManageCalendarEventInfo__</button></td>
-        <td>
-          <label>
-            <input type="checkbox" id="get_calendar_event" name="get_calendar_event" class="option-input" />
-            __MSG_prefs_OptionText_get_calendar_event_Info__
-          </label>
-        </td>
-      </tr>
-      <tr class="get_task_tr">
-        <td><span class="opt_title">__MSG_prefs_OptionText_get_task__</span>
-        <br><button id="btnManageTaskInfo" class="btn_small">__MSG_prefs_OptionText_btnManageTaskInfo__</button></td>
-        <td>
-          <label>
-            <input type="checkbox" id="get_task" name="get_task" class="option-input" />
-            __MSG_prefs_OptionText_get_task_Info__
-          </label>
-        </td>
-      </tr>
-      <tr class="get_calendar_event_tr" id="no_sparks">
-        <td colspan="2">
-          <span id="no_sparks_text">__MSG_prefs_OptionText_get_calendar_event_Sparks_not_present__</span>
-          <span id="wrong_sparks_text">__MSG_prefs_OptionText_get_calendar_event_Sparks_wrong_version__</span>
-          <br><a href="https://addons.thunderbird.net/it/thunderbird/addon/thunderai-sparks">__MSG_prefs_OptionText_download_now__</a>
-        </td>
-      </tr>
-      <tr>
-        <td style="width:20em"><label>
+      <td>
+        <label>
+          <input type="checkbox" id="composing_plain_text" name="composing_plain_text" class="option-input" />
+          &nbsp;<span>__MSG_prefs_OptionText_composing_plain_text_info__</span>
+        </label>
+      </td>
+    </tr>
+    <tr id="connection_ui_anchor"></tr>
+    <tr id="max_prompt_length_tr">
+      <td><span class="opt_title">__MSG_prefs_OptionText_max_prompt_length__</span></td>
+      <td>
+        <label>
+          <input type="number" id="max_prompt_length" name="max_prompt_length" class="option-input" />
+          <button type="button" id="reset_max_prompt_length" class="btn_small"
+            style="margin-left:0.5em;">__MSG_reset_default__</button>
+          <br>__MSG_prefs_OptionText_max_prompt_length_Info__
+        </label>
+      </td>
+    </tr>
+    <tr class="add_tags_tr">
+      <td><span class="opt_title">__MSG_prefs_OptionText_add_tags__</span>
+        <br><button id="btnManageTagsInfo" class="btn_small">__MSG_prefs_OptionText_btnManageTagsInfo__</button>
+      </td>
+      <td>
+        <label>
+          <input type="checkbox" id="add_tags" name="add_tags" class="option-input" />
+          __MSG_prefs_OptionText_add_tags_Info__
+          <br><span class="warn_API_needed" id="add_tags_warn_API_needed">__MSG_warn_API_needed__</span>
+        </label>
+      </td>
+    </tr>
+    <tr class="spamfilter_tr">
+      <td><span class="opt_title">__MSG_prefs_OptionText_spamfilter__</span>
+        <br><button id="btnManageSpamFilterInfo"
+          class="btn_small">__MSG_prefs_OptionText_btnManageSpamFilterInfo__</button>
+      </td>
+      <td>
+        <label>
+          <input type="checkbox" id="spamfilter" name="spamfilter" class="option-input" />
+          __MSG_prefs_OptionText_spamfilter_Info__
+          <br><span class="warn_API_needed" id="spamfilter_warn_API_needed">__MSG_warn_API_needed__</span>
+        </label>
+      </td>
+    </tr>
+    <tr class="summarize_tr">
+      <td><span class="opt_title">__MSG_prefs_OptionText_summarize__</span>
+        <br><button id="btnManageSummarizeInfo"
+          class="btn_small">__MSG_prefs_OptionText_btnManageSummarizeInfo__</button>
+      </td>
+      <td>
+        <label>
+          <input type="checkbox" id="summarize" name="summarize" class="option-input" />
+          __MSG_prefs_OptionText_summarize_Info__
+          <br><span class="warn_API_needed" id="summarize_warn_API_needed">__MSG_warn_API_needed__</span>
+        </label>
+      </td>
+    </tr>
+    <tr class="get_calendar_event_tr">
+      <td><span class="opt_title">__MSG_prefs_OptionText_get_calendar_event__</span>
+        <br><button id="btnManageCalendarEventInfo"
+          class="btn_small">__MSG_prefs_OptionText_btnManageCalendarEventInfo__</button>
+      </td>
+      <td>
+        <label>
+          <input type="checkbox" id="get_calendar_event" name="get_calendar_event" class="option-input" />
+          __MSG_prefs_OptionText_get_calendar_event_Info__
+        </label>
+      </td>
+    </tr>
+    <tr class="get_task_tr">
+      <td><span class="opt_title">__MSG_prefs_OptionText_get_task__</span>
+        <br><button id="btnManageTaskInfo" class="btn_small">__MSG_prefs_OptionText_btnManageTaskInfo__</button>
+      </td>
+      <td>
+        <label>
+          <input type="checkbox" id="get_task" name="get_task" class="option-input" />
+          __MSG_prefs_OptionText_get_task_Info__
+        </label>
+      </td>
+    </tr>
+    <tr class="get_calendar_event_tr" id="no_sparks">
+      <td colspan="2">
+        <span id="no_sparks_text">__MSG_prefs_OptionText_get_calendar_event_Sparks_not_present__</span>
+        <span id="wrong_sparks_text">__MSG_prefs_OptionText_get_calendar_event_Sparks_wrong_version__</span>
+        <br><a
+          href="https://addons.thunderbird.net/it/thunderbird/addon/thunderai-sparks">__MSG_prefs_OptionText_download_now__</a>
+      </td>
+    </tr>
+    <tr>
+      <td style="width:20em"><label>
           <span class="opt_title">__MSG_Debug__</span>
         </label></td>
-        <td>
-          <label>
-            <input type="checkbox" id="do_debug" name="do_debug" class="option-input" />
-            &nbsp;<span>__MSG_prefs_OptionText_do_debug_info__</span>
-          </label>
-        </td>
-      </tr>
-    </table>
-    <div id="btn_custom_prompts">
-        <button id="btnManagePrompts">__MSG_prefs_OptionText_btnManagePrompts__</button>
-        <br>__MSG_prefs_OptionText_btnManagePrompts_infoline__ <a href="https://micz.it/thunderbird-addon-thunderai/data-placeholders/">__MSG_more_info_string__</a>
-        <br><button id="btnManageCustomDataPH">__MSG_prefs_OptionText_btnManageCustomDataPH__</button>
-    </div>
-    <div id="miczDescription">
-      <h1>__MSG_prefsInfoTitle__</h1>
-      <p>
-        <span class="conntype_chatgpt_web">__MSG_prefsInfoDesc_1__<br></span>
-        <span class="conntype_chatgpt_api">__MSG_prefsInfoDesc_2__<br></span>
-        <span class="conntype_ollama_api">__MSG_prefsInfoDesc_3__ [<a href="https://micz.it/thunderbird-addon-thunderai/ollama-cors-information/">__MSG_more_info_string__</a>]<br></span>
-        <span class="conntype_openai_comp_api">__MSG_prefsInfoDesc_4__</span>
-        <br><span>__MSG_prefsInfoDesc_5__
-          <br>__MSG_prefsInfoDesc_6__</span>
-      </p>
-    </div>
-    <div id="miczTranslate">__MSG_TranslateText__ <a href="https://micz.it/thunderbird-addon-thunderai/translate/">__MSG_TranslateLink__</a></div>
-    <div id="miczDonation">__MSG_prefsDonation_1__<br/><a href="http://micz.it/thunderbird-addon-thunderai/donate/">__MSG_prefsDonation_2__</a></div>
-    <script src="mzta-options.js" type="module"></script>
-    <script src="../js/mzta-i18n.js"></script>
-  </body>
+      <td>
+        <label>
+          <input type="checkbox" id="do_debug" name="do_debug" class="option-input" />
+          &nbsp;<span>__MSG_prefs_OptionText_do_debug_info__</span>
+        </label>
+      </td>
+    </tr>
+  </table>
+  <div id="btn_custom_prompts">
+    <button id="btnManagePrompts">__MSG_prefs_OptionText_btnManagePrompts__</button>
+    <br>__MSG_prefs_OptionText_btnManagePrompts_infoline__ <a
+      href="https://micz.it/thunderbird-addon-thunderai/data-placeholders/">__MSG_more_info_string__</a>
+    <br><button id="btnManageCustomDataPH">__MSG_prefs_OptionText_btnManageCustomDataPH__</button>
+  </div>
+  <div id="miczDescription">
+    <h1>__MSG_prefsInfoTitle__</h1>
+    <p>
+      <span class="conntype_chatgpt_web">__MSG_prefsInfoDesc_1__<br></span>
+      <span class="conntype_chatgpt_api">__MSG_prefsInfoDesc_2__<br></span>
+      <span class="conntype_ollama_api">__MSG_prefsInfoDesc_3__ [<a
+          href="https://micz.it/thunderbird-addon-thunderai/ollama-cors-information/">__MSG_more_info_string__</a>]<br></span>
+      <span class="conntype_openai_comp_api">__MSG_prefsInfoDesc_4__</span>
+      <br><span>__MSG_prefsInfoDesc_5__
+        <br>__MSG_prefsInfoDesc_6__</span>
+    </p>
+  </div>
+  <div id="miczTranslate">__MSG_TranslateText__ <a
+      href="https://micz.it/thunderbird-addon-thunderai/translate/">__MSG_TranslateLink__</a></div>
+  <div id="miczDonation">__MSG_prefsDonation_1__<br /><a
+      href="http://micz.it/thunderbird-addon-thunderai/donate/">__MSG_prefsDonation_2__</a></div>
+  <script src="mzta-options.js" type="module"></script>
+  <script src="../js/mzta-i18n.js"></script>
+</body>
+
 </html>
