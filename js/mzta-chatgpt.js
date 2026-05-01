@@ -206,7 +206,7 @@ function addCustomDiv(prompt_action,tabId,mailMessageId) {
     loading.id = "mzta-loading";
     fixedDiv.appendChild(loading);
 
-    // OK button
+    // Action button
     var btn_ok = document.createElement('button');
     btn_ok.id="mzta-btn_ok";
     btn_ok.classList.add('mzta-btn');
@@ -217,12 +217,7 @@ function addCustomDiv(prompt_action,tabId,mailMessageId) {
     //console.log('>>>>>>>>>>>>>>> default: '+prompt_action)
     switch(String(prompt_action)){ 
         default:
-        case "0":     // close window
-            btn_ok.textContent = browser.i18n.getMessage("chatgpt_win_close");
-            btn_ok.onclick = async function() {
-                browser.runtime.sendMessage({command: "chatgpt_close", window_id: mztaWinId});
-            };
-            fixedDiv.appendChild(btn_ok);
+        case "0":     // no action button for plain output windows
             break;
         case "1":     // do reply
             disableButton(btn_ok);

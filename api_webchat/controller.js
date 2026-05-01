@@ -68,6 +68,7 @@ if (worker) {
     messagesArea.init(worker);
     messageInput.init(worker);
     messageInput.setMessagesArea(messagesArea);
+    messagesArea.setDeferStreamingRender(prompt_id === 'prompt_summarize');
 
     if (integration_options_config[integration]) {
         const integration_prefix = integration;

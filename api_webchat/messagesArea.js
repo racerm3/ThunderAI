@@ -214,6 +214,8 @@ class MessagesArea extends HTMLElement {
 
     fullTextHTML = "";
     llmName = "LLM";
+    deferStreamingRender = false;
+    deferredRawText = "";
 
     constructor() {
         super();
@@ -248,14 +250,27 @@ class MessagesArea extends HTMLElement {
         this.llmName = llmName;
     }
 
+    setDeferStreamingRender(shouldDefer) {
+        this.deferStreamingRender = shouldDefer;
+        this.deferredRawText = "";
+    }
+
     async handleTokensDone(promptData = null) {
+        if (this.deferStreamingRender) {
+            if (this.deferredRawText.length > 0) {
+                this.appendFormattedBotMessage(this.deferredRawText);
+                this.deferredRawText = "";
+            }
+        } else {
         this.flushAccumulatingMessage();
+        }
         await this.addActionButtons(promptData);
         this.addDivider();
     }
 
     appendUserMessage(messageText, type="user") {
         this.fullTextHTML = "";
+        this.deferredRawText = "";
         // console.log("[ThunderAI] appendUserMessage: " + messageText);
         const header = document.createElement('h2');
         let source = browser.i18n.getMessage("apiwebchat_you");
@@ -295,6 +310,7 @@ class MessagesArea extends HTMLElement {
         // console.log("[ThunderAI] appendBotMessage: " + messageText);
 
         this.fullTextHTML = messageText;
+        this.deferredRawText = "";
 
         const lastMessage = this.messages.lastElementChild;
         const isLastMessageFromUser = lastMessage && lastMessage.classList.contains('user');
@@ -312,7 +328,40 @@ class MessagesArea extends HTMLElement {
         this.scrollToBottom();
     }
 
+    appendFormattedBotMessage(messageText) {
+        const lastMessage = this.messages.lastElementChild;
+        const isLastMessageFromUser = lastMessage && lastMessage.classList.contains('user');
+
+        if (isLastMessageFromUser) {
+            const header = document.createElement('h2');
+            header.textContent = this.llmName;
+            this.messages.appendChild(header);
+        }
+
+        const md = window.markdownit();
+        const html = md.render(messageText);
+        this.fullTextHTML = html;
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        convertTextNodeNewlinesToBr(doc.body);
+
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', 'bot');
+        Array.from(doc.body.childNodes).forEach(node => {
+            messageElement.appendChild(node);
+        });
+
+        this.messages.appendChild(messageElement);
+        this.scrollToBottom();
+    }
+
     handleNewToken(token) {
+        if (this.deferStreamingRender) {
+            this.deferredRawText += token;
+            return;
+        }
+
         if (!this.accumulatingMessageEl) {
             this.createNewAccumulatingMessage();
         }
@@ -447,12 +496,6 @@ class MessagesArea extends HTMLElement {
             actionButton.style.marginRight = "10px";
         }
         actionButton.addEventListener('click', this.handleUseThisAnswerButtonClick(promptData,reply_type_pref.reply_type, fullTextHTMLAtAssignment));
-        const closeButton = document.createElement('button');
-        closeButton.textContent = browser.i18n.getMessage("chatgpt_win_close");
-        closeButton.classList.add('close_btn');
-        closeButton.addEventListener('click', async () => {
-            browser.runtime.sendMessage({command: "chatgpt_close", window_id: (await browser.windows.getCurrent()).id});    // close window
-        });
         if(promptData.action != 0) { 
             actionButtons.appendChild(splitButton);
             selectionInfo.style.display = "block"; // show selection info
@@ -474,8 +517,6 @@ class MessagesArea extends HTMLElement {
             });
             actionButtons.appendChild(diffvButton);
         }
-
-        actionButtons.appendChild(closeButton);
         this.messages.appendChild(actionButtons);
         this.messages.appendChild(selectionInfo);
         this.scrollToBottom();

@@ -26,9 +26,8 @@ const messagesInputStyle  = document.createElement('style');
 messagesInputStyle.textContent = `
     :host {
         display: flex;
-        justify-content: space-between;
+        flex-wrap: wrap;
         align-items: center;
-        height: 24px;
         margin: var(--margin);
         margin-bottom: 20px;
     }
@@ -59,16 +58,17 @@ messagesInputStyle.textContent = `
     }
     #statusLogger{
         font-size: 0.8rem;
-        position: absolute;
-        bottom: 1.5em;
-        right: 5em;
+        order: 3;
+        width: 100%;
+        margin-top: 8px;
         border: 1px solid lightgrey;
         border-radius: 5px;
-        padding: 5px;
+        padding: 6px 8px;
         background: #F2F2F2;
         display: flex;
         align-items: center;
-        gap: 3px;
+        gap: 6px;
+        box-sizing: border-box;
     }
     #statusLoggerImg{
         display: none;
