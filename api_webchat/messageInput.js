@@ -228,6 +228,7 @@ messageInputTemplate.content.appendChild(customDiv);
 class MessageInput extends HTMLElement {
 
     model = '';
+    hideInput = false;
     _customTextArray = [];
     _currentCustomTextIndex = 0;
 
@@ -285,14 +286,28 @@ class MessageInput extends HTMLElement {
         this._messageInputField.value = '';
     }
 
+    hideInputAndSubmit() {
+        this.hideInput = true;
+        this._messageInputField.style.display = 'none';
+        this._sendButton.style.display = 'none';
+        this._stopButton.style.display = 'none';
+        this.style.display = 'none';
+    }
+
     enableInput() {
         // console.log("[ThunderAI] enableInput");
         this._messageInputField.value = '';
-        this._messageInputField.removeAttribute('disabled');
-        this._sendButton.removeAttribute('disabled');
-        this._sendButton.style.display = 'block';
-        this._stopButton.setAttribute('disabled', 'disabled');
-        this._stopButton.style.display = 'none';
+        if (this.hideInput) {
+            this._messageInputField.style.display = 'none';
+            this._sendButton.style.display = 'none';
+            this._stopButton.style.display = 'none';
+        } else {
+            this._messageInputField.removeAttribute('disabled');
+            this._sendButton.removeAttribute('disabled');
+            this._sendButton.style.display = 'block';
+            this._stopButton.setAttribute('disabled', 'disabled');
+            this._stopButton.style.display = 'none';
+        }
         this._stopButton.title = browser.i18n.getMessage("chagpt_api_send_button") + ": " + this.model;
         this.hideStatusMessage();
         this.setStatusMessage('');
@@ -304,11 +319,17 @@ class MessageInput extends HTMLElement {
 
     showStatusMessage() {
         this._statusLogger.style.display = 'flex';
+        if (this.hideInput) {
+            this.style.display = 'flex';
+        }
     }
 
     hideStatusMessage() {
         this._statusLogger.style.display = 'none';
         this._statusLoggerImg.style.display = 'none';
+        if (this.hideInput) {
+            this.style.display = 'none';
+        }
     }
 
     _handleKeyDown(event) {
@@ -335,9 +356,13 @@ class MessageInput extends HTMLElement {
         // prevent user from interacting while we're waiting
         this._sendButton.setAttribute('disabled', 'disabled');
         this._sendButton.style.display = 'none';
-        this._stopButton.removeAttribute('disabled');
-        this._stopButton.style.display = 'block';
         this._messageInputField.setAttribute('disabled', 'disabled');
+        if (this.hideInput) {
+            this._stopButton.style.display = 'none';
+        } else {
+            this._stopButton.removeAttribute('disabled');
+            this._stopButton.style.display = 'block';
+        }
         let messageContent = this._messageInputField.value;
         this._messageInputField.value = '';
         if (!hidePrompt && this.messagesAreaComponent) {
