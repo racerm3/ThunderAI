@@ -35,5 +35,3 @@ $zip.Dispose()
 $stream.Close()
 
 Write-Host "Created $output"
-
-pause

@@ -44,6 +44,7 @@ div#miczRelNotes{
     right: 0px;
     bottom: 2px;
     padding: 2px 5px 0px 0px;
+    display: none !important;
 }
 
 div#miczStatusPage{
@@ -52,6 +53,7 @@ div#miczStatusPage{
     bottom: 2px;
     padding: 2px 0px 0px 5px;
     text-transform: capitalize;
+    display: none !important;
 }
 
 div#miczDescription h1{
@@ -286,4 +288,14 @@ label:has(input[type="checkbox"]) {
         background: rgb(41, 70, 70);
     }
 
+}
+
+#thstats,
+#mzta_top_msg,
+#mzta_doc_block,
+#no_sparks,
+#miczDescription,
+#miczTranslate,
+#miczDonation {
+    display: none !important;
 }

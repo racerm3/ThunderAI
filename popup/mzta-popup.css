@@ -9,7 +9,6 @@ body {
 #mzta_search_banner{
     background-color: #FAFAFA;
     color:black;
-    display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -22,6 +21,7 @@ body {
   }
   
   #mzta_search_input{
+    display: none !important;
     width: 12em;
     position: fixed;
     top:0;
@@ -32,8 +32,9 @@ body {
   }
 
   #_spacer_div{
+      display: none;
       width: 100%;
-      height: 2.2em;
+      height: 0;
   }
   
   #mzta_autocomplete-items {
