@@ -99,6 +99,7 @@ export function getDynamicSettingValue(prefs, prefix, settingName) {
 export const prefs_default = {
     ...global_integration_settings,
     do_debug: false,
+    enable_local_storage: true,
     chatgpt_win_height: 800,
     chatgpt_win_width: 700,
     chatgpt_win_top: '',

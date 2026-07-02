@@ -27,6 +27,7 @@ export class taStorage {
     static FIELD_TRANSLATION = 'translation';
 
     taLog = null;
+    static STORAGE_ENABLED_PREF = 'enable_local_storage';
 
     /**
      * @param {boolean} [do_debug=false] - Enable debug logging.
@@ -42,6 +43,16 @@ export class taStorage {
      */
     _buildKey(messageId) {
         return taStorage.STORAGE_KEY_PREFIX + messageId;
+    }
+
+    async _isLocalStorageEnabled() {
+        try {
+            let result = await browser.storage.sync.get({ [taStorage.STORAGE_ENABLED_PREF]: true });
+            return result[taStorage.STORAGE_ENABLED_PREF] !== false;
+        } catch (e) {
+            this.taLog.error('_isLocalStorageEnabled error: ' + e);
+            return true;
+        }
     }
 
     /**
@@ -111,7 +122,11 @@ export class taStorage {
                 ts: now,
             };
             record.ts = now;
-            await messenger.storage.local.set({ [key]: record });
+            if (await this._isLocalStorageEnabled()) {
+                await messenger.storage.local.set({ [key]: record });
+            } else {
+                this.taLog.log('[writeSpam] local storage disabled, skipping write');
+            }
         } catch (e) {
             this.taLog.error('writeSpam error: ' + e);
         }
@@ -207,7 +222,11 @@ export class taStorage {
                 ts: now,
             };
             record.ts = now;
-            await messenger.storage.local.set({ [key]: record });
+            if (await this._isLocalStorageEnabled()) {
+                await messenger.storage.local.set({ [key]: record });
+            } else {
+                this.taLog.log('[writeSummary] local storage disabled, skipping write');
+            }
         } catch (e) {
             this.taLog.error('writeSummary error: ' + e);
         }
@@ -311,7 +330,11 @@ export class taStorage {
                 ts: now
             };
             record.ts = now;
-            await messenger.storage.local.set({ [key]: record });
+            if (await this._isLocalStorageEnabled()) {
+                await messenger.storage.local.set({ [key]: record });
+            } else {
+                this.taLog.log('[writeTranslation] local storage disabled, skipping write');
+            }
         } catch (e) {
             this.taLog.error('writeTranslation error: ' + e);
         }

@@ -351,6 +351,10 @@
     "message": "The storage is used to save information about spam score, summaries and translations of each message.",
     "description": "Info text for storage management section in options"
   },
+  "prefs_storage_enable_local_storage_info": {
+    "message": "Activate local storage",
+    "description": "Info text explaining the local storage toggle"
+  },
   "prefs_storage_size": {
     "message": "Storage size",
     "description": "Label for storage size display"
