@@ -153,5 +153,7 @@ export const prefs_default = {
     translate_max_display_length: 0,     // 0 = no limit, otherwise max chars shown inline
     translate_lang: '',                  // target language, fallback on default_chatgpt_lang
     translate_exclude_lang: '',          // languages to do not translate
+    auto_clear_storage_on_threshold: false,
+    storage_clear_threshold_mb: 10,
     ...generated_prefs
 }

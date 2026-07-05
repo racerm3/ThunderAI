@@ -351,6 +351,27 @@
     "message": "The storage is used to save information about spam score, summaries and translations of each message.",
     "description": "Info text for storage management section in options"
   },
+  "prefs_storage_auto_clear_label": {
+    "message": "Automatically clear storage when threshold is exceeded",
+    "description": "Label for auto-clear storage checkbox"
+  },
+  "prefs_storage_auto_clear_threshold_label": {
+    "message": "Threshold (MB)",
+    "description": "Label for storage threshold number input"
+  },
+  "prefs_storage_auto_clear_info": {
+    "message": "When enabled, storage will be cleared automatically when the stored messages exceed the configured size.",
+    "description": "Help text for auto-clear storage option"
+  },
+  "prefs_storage_auto_clear_cleared": {
+    "message": "$COUNT$ records removed by automatic cleanup.",
+    "description": "Message shown after automatic storage clear",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "prefs_storage_enable_local_storage_info": {
     "message": "Activate local storage",
     "description": "Info text explaining the local storage toggle"

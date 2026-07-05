@@ -93,6 +93,77 @@ div#miczTranslate{
     font-size:smaller;
 }
 
+.opt_help{
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    min-width: 1em;
+    line-height: 1em;
+    text-align: center;
+    text-indent: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    background: #007bff;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.65);
+    cursor: help;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    vertical-align: middle;
+}
+
+.opt_help::before{
+    content: "i";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85em;
+    color: #ffffff;
+    pointer-events: none;
+}
+
+.opt_help::after{
+    content: attr(title);
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 0.35em);
+    transform: translateX(-50%);
+    z-index: 30;
+    display: block;
+    width: auto;
+    max-width: 320px;
+    min-width: 220px;
+    padding: 0.75em 0.85em;
+    background: rgba(0, 0, 0, 0.92);
+    color: #ffffff;
+    border-radius: 0.5em;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    white-space: normal;
+    text-align: left;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.opt_help:hover::after,
+.opt_help:focus::after{
+    opacity: 1;
+}
+
+.opt_help:hover,
+.opt_help:focus{
+    background: #0056d2;
+}
+
+.opt_help:focus-visible{
+    outline: 2px solid #66b1ff;
+    outline-offset: 2px;
+}
+
 .warn_API_needed{
     display: none;
     font-weight: bold;

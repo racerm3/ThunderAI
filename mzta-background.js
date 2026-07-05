@@ -1454,6 +1454,7 @@ async function reload_pref_init(){
         add_tags_auto_force_existing: prefs_default.add_tags_auto_force_existing,
         add_tags_auto_only_inbox: prefs_default.add_tags_auto_only_inbox,
         spamfilter: prefs_default.spamfilter,
+        spamfilter_include_junk: prefs_default.spamfilter_include_junk,
         summarize: prefs_default.summarize,
         summarize_auto: prefs_default.summarize_auto,
         translate: prefs_default.translate,
@@ -1710,10 +1711,19 @@ const newEmailListener = (folder, messagesList) => {
 
         let add_tags_auto_enabled = prefs_init.add_tags && prefs_init.add_tags_auto;
 
+        // Determine whether this folder should be treated as a Junk/Spam folder.
+        const isJunkFolder = Array.isArray(folder.specialUse) && folder.specialUse.includes('junk');
+
+        // Determine the effective spam filter setting based on the Junk folder status and user preferences.
+        let effectiveSpamFilter = prefs_init.spamfilter;
+        if (isJunkFolder && !prefs_init.spamfilter_include_junk) {
+            effectiveSpamFilter = false;
+        }
+
         await processEmails({
             messages: messages,
             addTagsAuto: add_tags_auto_enabled,
-            spamFilter: prefs_init.spamfilter,
+            spamFilter: effectiveSpamFilter,
             summarizeOnReceive: prefs_init.summarize && prefs_init.summarize_auto === 3,
             translateOnReceive: prefs_init.translate && prefs_init.translate_auto === 3,
             isAutoMode: true,

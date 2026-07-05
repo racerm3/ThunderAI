@@ -285,9 +285,13 @@
     <tr>
       <td><span class="opt_title">__MSG_prefs_storage_title__</span></td>
       <td>
-        <input type="checkbox" id="enable_local_storage" name="enable_local_storage" class="option-input" />&nbsp;<span>__MSG_prefs_storage_enable_local_storage_info__</span><br/>
-        __MSG_prefs_storage_size__: <span id="cache_storage_size"></span>&nbsp;<button id="btnClearCache" class="btn_small">__MSG_prefs_storage_clear_button__</button><br/>
-        __MSG_prefs_storage_info__
+        <input type="checkbox" id="enable_local_storage" name="enable_local_storage" class="option-input" />&nbsp;<span>__MSG_prefs_storage_enable_local_storage_info__</span>
+        <br/>
+        __MSG_prefs_storage_size__: <span id="cache_storage_size"></span>&nbsp;<button id="btnClearCache" class="btn_small">__MSG_prefs_storage_clear_button__</button>
+        <br/>
+        <input type="checkbox" id="auto_clear_storage_on_threshold" name="auto_clear_storage_on_threshold" class="option-input" />&nbsp;__MSG_prefs_storage_auto_clear_label__
+        <br/>
+        __MSG_prefs_storage_auto_clear_threshold_label__: <input type="number" id="storage_clear_threshold_mb" name="storage_clear_threshold_mb" class="option-input" min="1" style="width:6em;" />
       </td>
     </tr>
   </table>

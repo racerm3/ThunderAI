@@ -308,7 +308,46 @@ function resetMaxPromptLength(){
 async function updateCacheSize() {
   let size = await getCacheStorageUsedSpace();
   document.getElementById('cache_storage_size').textContent = size;
+
+  // Auto-clear logic: if enabled and size >= threshold, clear storage
+  try {
+    const prefs = await browser.storage.sync.get({
+      auto_clear_storage_on_threshold: false,
+      storage_clear_threshold_mb: 10
+    });
+    if (prefs.auto_clear_storage_on_threshold) {
+      const bytes = parseFormattedBytes(size);
+      const thresholdBytes = Number(prefs.storage_clear_threshold_mb) * 1024 * 1024;
+      if (!isNaN(bytes) && bytes >= thresholdBytes) {
+        taLog.log(`Auto-clearing storage: ${bytes} bytes >= ${thresholdBytes} bytes`);
+        let count = await taStorage.clearAllRecords();
+        alert(browser.i18n.getMessage('prefs_storage_auto_clear_cleared', [String(count)]));
+        // update displayed size after clear
+        let newSize = await getCacheStorageUsedSpace();
+        document.getElementById('cache_storage_size').textContent = newSize;
+      }
+    }
+  } catch (e) {
+    console.error('Error in auto-clear storage check', e);
+  }
 }  
+
+function parseFormattedBytes(formatted) {
+  if (!formatted) return 0;
+  const parts = String(formatted).trim().split(' ');
+  if (parts.length < 2) return 0;
+  const value = parseFloat(parts[0].replace(/,/g, ''));
+  const unit = parts[1].toUpperCase();
+  const multipliers = {
+    'BYTES': 1,
+    'B': 1,
+    'KB': 1024,
+    'MB': 1024 * 1024,
+    'GB': 1024 * 1024 * 1024
+  };
+  const m = multipliers[unit] || 1;
+  return Math.round(value * m);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   await injectConnectionUI({
@@ -336,6 +375,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll(".option-input").forEach(element => {
     element.addEventListener("change", saveOptions);
   });
+
+  // Wire auto-clear storage UI: disable threshold input when checkbox unchecked
+  const autoClearCheckbox = document.getElementById('auto_clear_storage_on_threshold');
+  const thresholdInput = document.getElementById('storage_clear_threshold_mb');
+  if (autoClearCheckbox && thresholdInput) {
+    // initialize state
+    thresholdInput.disabled = !autoClearCheckbox.checked;
+    autoClearCheckbox.addEventListener('change', (e) => {
+      thresholdInput.disabled = !e.target.checked;
+    });
+  }
   
   let addtags_el = document.getElementById('add_tags');
   let addtags_info_btn = document.getElementById('btnManageTagsInfo');
