@@ -44,6 +44,8 @@ import {
 let autocompleteSuggestions = [];
 let taLog = null;
 let spamReport = null;
+let currentReportData = null;
+let currentSortState = { key: 'message_date', direction: 'desc' };
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -237,6 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
        checkboxes.forEach(checkbox => checkbox.checked = false);
      });
 
+    initializeReportTableSorting();
     loadSpamReport();
 });
 
@@ -256,36 +259,126 @@ function check_spamfilter_threshold(event) {
   }
 }
 
+function initializeReportTableSorting() {
+  document.querySelectorAll('#report_data thead th[data-sort-key]').forEach(header => {
+    header.addEventListener('click', () => {
+      const sortKey = header.dataset.sortKey;
+      if (currentSortState.key === sortKey) {
+        currentSortState.direction = currentSortState.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortState.key = sortKey;
+        currentSortState.direction = 'asc';
+      }
+
+      updateReportTableSortIndicators();
+      if (currentReportData) {
+        populateTable(currentReportData, currentSortState.key, currentSortState.direction);
+      }
+    });
+
+    header.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        header.click();
+      }
+    });
+  });
+}
+
+function updateReportTableSortIndicators() {
+  document.querySelectorAll('#report_data thead th[data-sort-key]').forEach(header => {
+    const indicator = header.querySelector('.sort-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+
+    const isActive = header.dataset.sortKey === currentSortState.key;
+    header.classList.toggle('sorted', isActive);
+    header.setAttribute('aria-sort', isActive ? (currentSortState.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+
+    if (isActive) {
+      const indicatorNode = document.createElement('span');
+      indicatorNode.className = 'sort-indicator';
+      indicatorNode.textContent = currentSortState.direction === 'asc' ? ' ↑' : ' ↓';
+      header.appendChild(indicatorNode);
+    }
+  });
+}
+
+function getReportSortValue(report, key) {
+  switch (key) {
+    case 'message_date':
+    case 'report_date':
+      return report[key] ? new Date(report[key]).getTime() : Number.NEGATIVE_INFINITY;
+    case 'from':
+    case 'subject':
+    case 'explanation':
+      return String(Array.isArray(report[key]) ? report[key].join(', ') : (report[key] ?? '')).toLowerCase();
+    case 'spamValue':
+      return Number(report.spamValue) || 0;
+    case 'moved':
+      return report.moved ? 1 : 0;
+    default:
+      return '';
+  }
+}
+
+function sortReportRows(rows, sortKey, sortDirection) {
+  const directionMultiplier = sortDirection === 'asc' ? 1 : -1;
+
+  return [...rows].sort((rowA, rowB) => {
+    const valueA = getReportSortValue(rowA.report, sortKey);
+    const valueB = getReportSortValue(rowB.report, sortKey);
+
+    if (typeof valueA === 'number' && typeof valueB === 'number') {
+      if (valueA === valueB) {
+        return rowA.email.localeCompare(rowB.email);
+      }
+      return (valueA - valueB) * directionMultiplier;
+    }
+
+    if (valueA === valueB) {
+      return rowA.email.localeCompare(rowB.email);
+    }
+
+    return valueA.localeCompare(valueB) * directionMultiplier;
+  });
+}
+
 async function loadSpamReport(){
     let report_data = await spamReport.getAllReportData();
+    currentReportData = report_data;
     //console.log(">>>>>>>>>>>> loadSpamReport: " + JSON.stringify(report_data));
     //document.getElementById("report_data").textContent = JSON.stringify(report_data, null, 2);
     if(report_data == undefined){
       document.getElementById("report_data").innerText = browser.i18n.getMessage("spamfilter_no_reports");
     }else{
-      populateTable(report_data);
+      populateTable(report_data, currentSortState.key, currentSortState.direction);
+      updateReportTableSortIndicators();
     }
 }
 
-
  // Function to populate the table
- function populateTable(data) {
+ function populateTable(data, sortKey = currentSortState.key, sortDirection = currentSortState.direction) {
   const tableBody = document.getElementById("report_data_body");
   tableBody.innerHTML = ""; // Clear table before inserting new data
 
-  Object.keys(data).forEach(email => {
-      const report = data[email];
+  const reportRows = sortReportRows(Object.keys(data).map(email => ({ email, report: data[email] })), sortKey, sortDirection);
 
+  reportRows.forEach(({ email, report }) => {
       // Create a new row
       const row = document.createElement("tr");
+      if (report.moved) {
+          row.classList.add('spam-report-moved');
+      }
 
       // Create and append each cell as a DOM element
-      const tdHeaderMessageId = document.createElement("td");
-      tdHeaderMessageId.textContent = report.headerMessageId;
-      row.appendChild(tdHeaderMessageId);
+      //const tdHeaderMessageId = document.createElement("td");
+      //tdHeaderMessageId.textContent = report.headerMessageId;
+      //row.appendChild(tdHeaderMessageId);
 
       const tdMessageDate = document.createElement("td");
-      tdMessageDate.textContent = new Date(report.message_date).toLocaleString();
+      tdMessageDate.textContent = report.message_date ? new Date(report.message_date).toLocaleString() : '';
       row.appendChild(tdMessageDate);
 
       const tdFrom = document.createElement("td");
@@ -309,7 +402,7 @@ async function loadSpamReport(){
       row.appendChild(tdExplanation);
 
       const tdReportDate = document.createElement("td");
-      tdReportDate.textContent = new Date(report.report_date).toLocaleString();
+      tdReportDate.textContent = report.report_date ? new Date(report.report_date).toLocaleString() : '';
       row.appendChild(tdReportDate);
 
       // Append the row to the table

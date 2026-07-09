@@ -127,6 +127,30 @@ table#report_data th {
     background-color: #f4f4f4;
 }
 
+tr.spam-report-moved {
+    background-color: #ffe5e5 !important;
+}
+
+tr.spam-report-moved td {
+    background-color: #ffe5e5 !important;
+}
+
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.sortable-header.sorted {
+    font-weight: 700;
+}
+
+.sort-indicator {
+    margin-left: 0.35rem;
+    font-size: 0.9em;
+}
+
+
 label:has(input[type="checkbox"]) {
     cursor: pointer;
 }
@@ -177,5 +201,13 @@ label:has(input[type="checkbox"]) {
 
     table#report_data td {
         background-color: #222;
+    }
+
+    tr.spam-report-moved {
+        background-color: #5a1a1a !important;
+    }
+
+    tr.spam-report-moved td {
+        background-color: #5a1a1a !important;
     }
 }
