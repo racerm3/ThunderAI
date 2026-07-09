@@ -2411,5 +2411,17 @@
   "menu_order_icon_none": {
     "message": "(none)",
     "description": "Dropdown option meaning no custom icon is selected for the context menu item"
+  },
+  "prefs_OptionText_summarize_auto_uselist": {
+    "message": "Auto-summarize specific senders",
+    "description": "Label for the auto-summarize senders feature"
+  },
+  "prefs_OptionText_summarize_auto_uselist_Info": {
+    "message": "Automatically generate a summary when receiving emails from senders in the list below.",
+    "description": "Info text for auto-summarize senders"
+  },
+  "prefs_OptionText_summarize_auto_uselist_list_Info": {
+    "message": "Enter one email address or domain per line.",
+    "description": "Info text for the text area of senders list"
   }
 }

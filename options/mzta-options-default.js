@@ -145,6 +145,8 @@ export const prefs_default = {
     spamfilter_show_msg_panel: true,
     summarize: false,
     summarize_auto: 1,                   // 0: disabled, 1: manual button, 2: automatic on message open, 3: generate on email receive
+    summarize_auto_uselist: false,
+    summarize_auto_uselist_list: '',
     summarize_display_mode: 'inline',    // 'inline' or 'webchat'
     summarize_max_display_length: 0,     // 0 = no limit, otherwise max chars shown inline
     summarize_strip_formatting: false,   // strip HTML/markdown formatting from AI summary

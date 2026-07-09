@@ -242,7 +242,7 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 async function _initSummary() {
                     try {
                         let tabId = sender.tab.id;
-                        let prefs = await browser.storage.sync.get({ summarize: prefs_default.summarize, summarize_auto: prefs_default.summarize_auto, summarize_display_mode: prefs_default.summarize_display_mode, summarize_max_display_length: prefs_default.summarize_max_display_length, summarize_strip_formatting: prefs_default.summarize_strip_formatting });
+                        let prefs = await browser.storage.sync.get({ summarize: prefs_default.summarize, summarize_auto: prefs_default.summarize_auto, summarize_display_mode: prefs_default.summarize_display_mode, summarize_max_display_length: prefs_default.summarize_max_display_length, summarize_strip_formatting: prefs_default.summarize_strip_formatting, summarize_auto_uselist: prefs_default.summarize_auto_uselist, summarize_auto_uselist_list: prefs_default.summarize_auto_uselist_list });
 
                         if (!prefs.summarize) return;
 
@@ -261,14 +261,25 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             return;
                         }
 
-                        // If summarize_auto is disabled, don't show button or auto-generate
-                        if (prefs.summarize_auto === 0) return;
+                        let isSenderInList = false;
+                        if (prefs.summarize_auto_uselist && prefs.summarize_auto_uselist_list) {
+                            let authorEmail = message.author.match(/<([^>]+)>/);
+                            authorEmail = authorEmail ? authorEmail[1].toLowerCase() : message.author.toLowerCase();
+                            let senderList = prefs.summarize_auto_uselist_list.split(/[\n,]+/).map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
+                            isSenderInList = senderList.some(sender => {
+                                let s = sender.replace(/^@/, '');
+                                return authorEmail === s || authorEmail.endsWith('@' + s) || authorEmail.endsWith('.' + s);
+                            });
+                        }
 
-                        // Auto mode (summarize_auto === 2) always generates inline
-                        if (prefs.summarize_auto === 2) {
+                        // Auto mode (summarize_auto === 2) or sender is in list always generates inline
+                        if (prefs.summarize_auto === 2 || isSenderInList) {
                             _generateSummaryForMessage(message.headerMessageId, tabId);
                             return;
                         }
+
+                        // If summarize_auto is disabled, don't show button or auto-generate
+                        if (prefs.summarize_auto === 0) return;
 
                         // Manual button mode (summarize_auto === 1)
                         if (prefs.summarize_display_mode === 'inline') {
@@ -1457,6 +1468,7 @@ async function reload_pref_init(){
         spamfilter_include_junk: prefs_default.spamfilter_include_junk,
         summarize: prefs_default.summarize,
         summarize_auto: prefs_default.summarize_auto,
+        summarize_auto_uselist: prefs_default.summarize_auto_uselist,
         translate: prefs_default.translate,
         translate_auto: prefs_default.translate_auto,
         spamfilter_threshold: prefs_default.spamfilter_threshold,
@@ -1465,7 +1477,7 @@ async function reload_pref_init(){
         chatgpt_win_save_position: prefs_default.chatgpt_win_save_position,
         ...getDynamicSettingsDefaults(['use_specific_integration', 'connection_type'])
     });
-    _process_incoming = prefs_init.add_tags_auto || prefs_init.spamfilter || (prefs_init.summarize && prefs_init.summarize_auto === 3) || (prefs_init.translate && prefs_init.translate_auto === 3);
+    _process_incoming = prefs_init.add_tags_auto || prefs_init.spamfilter || (prefs_init.summarize && prefs_init.summarize_auto === 3) || (prefs_init.summarize && prefs_init.summarize_auto_uselist) || (prefs_init.translate && prefs_init.translate_auto === 3);
     _sparks_presence = await checkSparksPresence();
 }
 
@@ -1713,6 +1725,7 @@ const newEmailListener = (folder, messagesList) => {
 
         // Determine whether this folder should be treated as a Junk/Spam folder.
         const isJunkFolder = Array.isArray(folder.specialUse) && folder.specialUse.includes('junk');
+        const summarizeAutoUseListEnabled = prefs_init.summarize && prefs_init.summarize_auto_uselist;
 
         // Determine the effective spam filter setting based on the Junk folder status and user preferences.
         let effectiveSpamFilter = prefs_init.spamfilter;
@@ -1725,11 +1738,12 @@ const newEmailListener = (folder, messagesList) => {
             addTagsAuto: add_tags_auto_enabled,
             spamFilter: effectiveSpamFilter,
             summarizeOnReceive: prefs_init.summarize && prefs_init.summarize_auto === 3,
+            summarizeAutoUseList: summarizeAutoUseListEnabled,
             translateOnReceive: prefs_init.translate && prefs_init.translate_auto === 3,
             isAutoMode: true,
         });
 
-        if(prefs_init.spamfilter){
+        if(effectiveSpamFilter && prefs_init.spamfilter){
             spamReport.truncReportData();
         }
     }
@@ -1771,6 +1785,7 @@ async function processEmails(args) {
         spamFilter = false,
         summarize = false,
         summarizeOnReceive = false,
+        summarizeAutoUseList = false,
         translateOnReceive = false,
         translate = false,
         isAutoMode = false,
@@ -1778,10 +1793,10 @@ async function processEmails(args) {
 
     taWorkingStatus.startWorking();
 
-    // One loop handles addTagsAuto, spamFilter, summarizeOnReceive, and translateOnReceive (on email receive).
+    // One loop handles addTagsAuto, spamFilter, summarizeOnReceive, summarizeAutoUseList, and translateOnReceive (on email receive).
     // The separate summarize block below handles the context menu flow.
 
-    if (addTagsAuto || spamFilter || summarizeOnReceive || translateOnReceive || translate) {
+    if (addTagsAuto || spamFilter || summarizeOnReceive || summarizeAutoUseList || translateOnReceive || translate) {
         let prefs_aats = await browser.storage.sync.get({
             add_tags_maxnum: prefs_default.add_tags_maxnum,
             connection_type: prefs_default.connection_type,
@@ -1792,6 +1807,8 @@ async function processEmails(args) {
             add_tags_exclusions_exact_match: prefs_default.add_tags_exclusions_exact_match,
             add_tags_auto_uselist: prefs_default.add_tags_auto_uselist,
             add_tags_auto_uselist_list: prefs_default.add_tags_auto_uselist_list,
+            summarize_auto_uselist: prefs_default.summarize_auto_uselist,
+            summarize_auto_uselist_list: prefs_default.summarize_auto_uselist_list,
             spamfilter_enabled_accounts: prefs_default.spamfilter_enabled_accounts,
             spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses,
             spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook,
@@ -1878,7 +1895,20 @@ async function processEmails(args) {
                 }
             }
     
-            if (spamFilter) {
+            let isSenderInList = false;
+            if (prefs_aats.summarize_auto_uselist && prefs_aats.summarize_auto_uselist_list) {
+                let authorEmail = message.author.match(/<([^>]+)>/);
+                authorEmail = authorEmail ? authorEmail[1].toLowerCase() : message.author.toLowerCase();
+                let senderList = prefs_aats.summarize_auto_uselist_list.split(/[\n,]+/).map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
+                isSenderInList = senderList.some(sender => {
+                    let s = sender.replace(/^@/, '');
+                    return authorEmail === s || authorEmail.endsWith('@' + s) || authorEmail.endsWith('.' + s);
+                });
+            }
+            let shouldSummarize = summarizeOnReceive || isSenderInList;
+            let shouldSkipSpamFilterForMessage = Boolean(spamFilter && summarizeAutoUseList && isSenderInList);
+
+            if (spamFilter && !shouldSkipSpamFilterForMessage) {
                 let skipSpamFilter = false;
                 if(isAutoMode && prefs_aats.spamfilter_enabled_accounts.length > 0){
                     let accountId = message.folder.accountId;
@@ -1900,7 +1930,7 @@ async function processEmails(args) {
                 }
             }
 
-            if (summarizeOnReceive) {
+            if (shouldSummarize) {
                 if (!curr_fullMessage) {
                     curr_fullMessage = await browser.messages.getFull(message.id);
                 }
@@ -1965,7 +1995,8 @@ async function processEmails(args) {
     taWorkingStatus.stopWorking();
 }
 
-browser.messages.onNewMailReceived.addListener(newEmailListener, !prefs_init.add_tags_auto_only_inbox);
+let listenAllFolders = !prefs_init.add_tags_auto_only_inbox || prefs_init.summarize_auto_uselist;
+browser.messages.onNewMailReceived.addListener(newEmailListener, listenAllFolders);
 
 // Inject script and CSS in all already open message tabs.
 let openTabs = await messenger.tabs.query();
