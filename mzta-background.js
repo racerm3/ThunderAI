@@ -888,9 +888,17 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         }
 
         // Check if sender is in any address book
-        let skip_addressbook = options.skip_addressbook !== undefined
-            ? options.skip_addressbook
-            : (await browser.storage.sync.get({spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook})).spamfilter_skip_addressbook;
+        // Robustness: always re-read the latest setting from storage (fixes cases where
+        // batch auto-processing uses stale prefs until a toggle/restart triggers a reload).
+        const storedSkipAddressbook = (await browser.storage.sync.get({
+            spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook
+        })).spamfilter_skip_addressbook;
+
+        const skip_addressbook =
+            options.skip_addressbook !== undefined && options.skip_addressbook !== null
+                ? options.skip_addressbook
+                : storedSkipAddressbook;
+
         if (skip_addressbook && senderEmail) {
             try {
                 let hasPermission = await browser.permissions.contains({ permissions: ["addressBooks"] });
