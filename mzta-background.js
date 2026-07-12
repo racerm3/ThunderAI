@@ -894,10 +894,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook
         })).spamfilter_skip_addressbook;
 
-        const skip_addressbook =
-            options.skip_addressbook !== undefined && options.skip_addressbook !== null
-                ? options.skip_addressbook
-                : storedSkipAddressbook;
+        const skip_addressbook = storedSkipAddressbook;
 
         if (skip_addressbook && senderEmail) {
             try {
@@ -1937,8 +1934,7 @@ async function processEmails(args) {
                             messageData: { message, fullMessage: curr_fullMessage, body_text, msg_text },
                             prefs: prefs_aats,
                             autoMove: true,
-                            skip_addresses: spamfilter_skip_addresses,
-                            skip_addressbook: spamfilter_skip_addressbook
+                            skip_addresses: spamfilter_skip_addresses
                         });
                 }
             }
