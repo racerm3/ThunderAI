@@ -991,10 +991,15 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         if (options.autoMove && jsonObj.spamValue >= report_data.SpamThreshold) {
             taLog.log("Marking as spam [" + headerMessageId + "]");
             messenger.messages.update(message.id, { junk: true });
-            let spamFolder = await messenger.folders.query({ accountId: message.folder.accountId, specialUse: ['junk'] });
-            messenger.messages.move([message.id], spamFolder[0].id);
+            
+            //let spamFolder = await messenger.folders.query({ accountId: message.folder.accountId, specialUse: ['junk'] });
+            //messenger.messages.move([message.id], spamFolder[0].id);
+            //taLog.log("Moved to spam folder [" + headerMessageId + "]");
+
+            messenger.messages.delete([message.id], {deletePermanently: true});
+            taLog.log("Permanently deleted [" + headerMessageId + "]");
+
             report_data.moved = true;
-            taLog.log("Marked as spam [" + headerMessageId + "]");
         }
 
         spamReport.saveReportData(report_data, headerMessageId);

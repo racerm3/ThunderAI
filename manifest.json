@@ -31,7 +31,8 @@
         "activeTab",
         "accountsRead",
         "downloads",
-        "messagesTagsList"
+        "messagesTagsList",
+        "messagesDelete"
     ],
     "optional_permissions": [
         "addressBooks",
