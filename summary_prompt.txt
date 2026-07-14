@@ -1,0 +1,1 @@
+Provide a concise summary of the following email message with each topic summarized in a single sentence, all in a bulleted list.  Ignore anything promotional or marketing related.

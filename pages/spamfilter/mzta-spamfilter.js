@@ -311,9 +311,11 @@ function getReportSortValue(report, key) {
     case 'report_date':
       return report[key] ? new Date(report[key]).getTime() : Number.NEGATIVE_INFINITY;
     case 'from':
+    case 'to':
     case 'subject':
     case 'explanation':
       return String(Array.isArray(report[key]) ? report[key].join(', ') : (report[key] ?? '')).toLowerCase();
+
     case 'spamValue':
       return Number(report.spamValue) || 0;
     case 'moved':
@@ -385,9 +387,14 @@ async function loadSpamReport(){
       tdFrom.textContent = Array.isArray(report.from) ? report.from.join(", ") : report.from;
       row.appendChild(tdFrom);
 
+      const tdTo = document.createElement("td");
+      tdTo.textContent = Array.isArray(report.to) ? report.to.join(", ") : report.to;
+      row.appendChild(tdTo);
+
       const tdSubject = document.createElement("td");
       tdSubject.textContent = Array.isArray(report.subject) ? report.subject.join(", ") : report.subject;
       row.appendChild(tdSubject);
+
 
       const tdSpamValue = document.createElement("td");
       tdSpamValue.textContent = report.spamValue;

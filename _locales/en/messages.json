@@ -1521,6 +1521,10 @@
     "message": "From",
     "description": ""
   },
+  "To": {
+    "message": "To",
+    "description": ""
+  },
   "Subject": {
     "message": "Subject",
     "description": ""

@@ -84,6 +84,7 @@ export class taSpamReport {
             report_date: new Date(spam.ts),
             subject: spam.subject,
             from: spam.from,
+            to: spam.to,
             message_date: spam.message_date,
             moved: spam.moved,
             SpamThreshold: spam.SpamThreshold,
