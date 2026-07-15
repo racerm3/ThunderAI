@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     */
     let count = await taStorage.clearAllRecords();
-    alert(browser.i18n.getMessage("prefs_storage_clear_done", [String(count)]));
+    //alert(browser.i18n.getMessage("prefs_storage_clear_done", [String(count)]));
     updateCacheSize();
   });
 
