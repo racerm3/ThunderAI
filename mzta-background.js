@@ -848,12 +848,13 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             msg_text = options.messageData.msg_text;
             body_text = options.messageData.body_text;
         } else {
-            const messageResult = await browser.messages.query({ headerMessageId: headerMessageId });
-            if (!messageResult || messageResult.messages.length === 0) {
-                let err_data = await spamReport.saveError(headerMessageId, "Message not found");
-                await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
-                return { success: false };
-            }
+    const messageResult = await browser.messages.query({ headerMessageId: headerMessageId });
+    if (!messageResult || messageResult.messages.length === 0) {
+        let err_data = await spamReport.saveError(headerMessageId, "Message not found");
+        await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
+        taWorkingStatus.stopWorking();
+        return { success: false };
+    }
             message = messageResult.messages[0];
             curr_fullMessage = await browser.messages.getFull(message.id);
             msg_text = await getMailBody(curr_fullMessage);
@@ -884,6 +885,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
                 spamReport.saveReportData(report_data, headerMessageId);
                 await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
+                taWorkingStatus.stopWorking();
                 return { success: true };
             }
         }
@@ -922,6 +924,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                         report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
                         spamReport.saveReportData(report_data, headerMessageId);
                         await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
+                        taWorkingStatus.stopWorking();
                         return { success: true };
                     }
                 }
@@ -960,6 +963,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             console.error("[ThunderAI | SpamFilter] Error getting spamfilter: ", err);
             let err_data = await spamReport.saveError(headerMessageId, err.message || String(err));
             await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
+            taWorkingStatus.stopWorking();
             return { success: false };
         }
         taLog.log("spamfilter_result: " + spamfilter_result);
@@ -972,6 +976,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             console.error("[ThunderAI | SpamFilter] Error extracting JSON from AI response: ", e);
             let err_data = await spamReport.saveError(headerMessageId, e.message || String(e));
             await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
+            taWorkingStatus.stopWorking();
             return { success: false };
         }
         taLog.log("SpamFilter jsonObj: " + JSON.stringify(jsonObj));
@@ -1004,6 +1009,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
 
         spamReport.saveReportData(report_data, headerMessageId);
         await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
+        taWorkingStatus.stopWorking();
         return { success: true };
 
     } catch (error) {
@@ -1014,6 +1020,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             let err_data = await spamReport.saveError(headerMessageId, error.message || String(error));
             await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
         }
+        taWorkingStatus.stopWorking();
         return { success: false };
     }
 }
