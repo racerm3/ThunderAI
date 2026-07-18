@@ -468,13 +468,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     openTab('/pages/addtags/mzta-add-tags.html');
   });
 
-  document.getElementById('btnManageSpamFilterInfo').addEventListener('click', () => {
-    openTab('/pages/spamfilter/mzta-spamfilter.html');
-  });
-  
-  document.getElementById('btnManageSummarizeInfo').addEventListener('click', () => {
-    openTab('/pages/summarize/mzta-summarize.html');
-  });
+   document.getElementById('btnManageSpamFilterInfo').addEventListener('click', () => {
+     openTab('/pages/spamfilter/mzta-spamfilter.html');
+   });
+
+   document.getElementById('btnViewSpamLog').addEventListener('click', () => {
+     openTab('/pages/spamlog/mzta-spamlog.html');
+   });
+
+   document.getElementById('btnManageSummarizeInfo').addEventListener('click', () => {
+     openTab('/pages/summarize/mzta-summarize.html');
+   });
 
   document.getElementById('btnManageTranslateInfo').addEventListener('click', () => {
     openTab('/pages/translate/mzta-translate.html');

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ThunderAI - __MSG_SpamLog_PageTitle__</title>
+    <link rel="stylesheet" href="mzta-spamlog.css">
+    <link rel="icon" href="../../images/icon-16px.png">
+</head>
+<body>
+    <div>
+        <h1 class="page_title">__MSG_SpamLog_PageTitle__</h1>
+    </div>
+    <div id="spamlog_container">
+        <div class="btn_div">
+            <button id="btnRefreshSpamLog">__MSG_SpamLog_refresh_btn__</button>
+            <button id="btnClearSpamLog">__MSG_SpamLog_clear_btn__</button>
+        </div>
+        <div id="spamlog_reports_container">
+            <table id="report_data">
+                <thead>
+                    <tr>
+                        <th class="sortable-header" data-sort-key="message_date" tabindex="0" aria-sort="none">__MSG_Date__</th>
+                        <th class="sortable-header" data-sort-key="from" tabindex="0" aria-sort="none">__MSG_From__</th>
+                        <th class="sortable-header" data-sort-key="to" tabindex="0" aria-sort="none">__MSG_To__</th>
+                        <th class="sortable-header" data-sort-key="subject" tabindex="0" aria-sort="none">__MSG_Subject__</th>
+                        <th class="sortable-header" data-sort-key="spamValue" tabindex="0" aria-sort="none">__MSG_Spam_Value__</th>
+                        <th class="sortable-header" data-sort-key="moved" tabindex="0" aria-sort="none">__MSG_Moved_to_Spam__</th>
+                        <th class="sortable-header" data-sort-key="explanation" tabindex="0" aria-sort="none">__MSG_Explanation__</th>
+                    </tr>
+                </thead>
+                <tbody id="report_data_body">
+                    <!-- Rows will be inserted dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="mzta-spamlog.js" type="module"></script>
+    <script src="../../js/mzta-i18n.js"></script>
+</body>
+</html>

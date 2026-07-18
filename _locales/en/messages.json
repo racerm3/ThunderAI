@@ -2427,5 +2427,25 @@
   "prefs_OptionText_summarize_auto_uselist_list_Info": {
     "message": "Enter one email address or domain per line.",
     "description": "Info text for the text area of senders list"
+  },
+  "prefs_OptionText_btnViewSpamLog": {
+    "message": "View Spam Log",
+    "description": "Button to view spam reports log"
+  },
+  "SpamLog_PageTitle": {
+    "message": "Spam Log",
+    "description": "Title for spam log page"
+  },
+  "SpamLog_refresh_btn": {
+    "message": "Refresh",
+    "description": "Button to refresh spam log"
+  },
+  "SpamLog_clear_btn": {
+    "message": "Clear Spam Log",
+    "description": "Button to clear spam log"
+  },
+  "SpamLog_clear_confirm": {
+    "message": "Are you sure you want to clear all spam reports? This action cannot be undone.",
+    "description": "Confirmation dialog for clearing spam log"
   }
 }
