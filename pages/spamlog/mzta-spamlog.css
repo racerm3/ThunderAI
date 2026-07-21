@@ -25,6 +25,32 @@
     margin-bottom: 10px;
 }
 
+.filter_div {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.filter_div label {
+    font-weight: normal;
+    margin-right: 5px;
+}
+
+.filter_div select {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+.filter_div select:focus {
+    outline: none;
+    border-color: #409EFF;
+}
+
 table#report_data {
     width: 100%;
     border-collapse: collapse;
@@ -119,6 +145,12 @@ tr.spam-report-moved td {
     }
 
     .sortable-header {
+        color: #ddd;
+    }
+
+    .filter_div select {
+        background-color: #333;
+        border-color: #555;
         color: #ddd;
     }
 }

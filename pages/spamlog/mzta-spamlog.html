@@ -15,6 +15,14 @@
             <button id="btnRefreshSpamLog">__MSG_SpamLog_refresh_btn__</button>
             <button id="btnClearSpamLog">__MSG_SpamLog_clear_btn__</button>
         </div>
+        <div class="filter_div">
+            <label for="filterMovedToSpam">__MSG_SpamLog_filter_label__:</label>
+            <select id="filterMovedToSpam">
+                <option value="all">__MSG_SpamLog_filter_all__</option>
+                <option value="moved">__MSG_SpamLog_filter_moved_yes__</option>
+                <option value="not_moved">__MSG_SpamLog_filter_moved_no__</option>
+            </select>
+        </div>
         <div id="spamlog_reports_container">
             <table id="report_data">
                 <thead>

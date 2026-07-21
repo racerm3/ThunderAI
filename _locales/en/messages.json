@@ -2447,5 +2447,21 @@
   "SpamLog_clear_confirm": {
     "message": "Are you sure you want to clear all spam reports? This action cannot be undone.",
     "description": "Confirmation dialog for clearing spam log"
+  },
+  "SpamLog_filter_label": {
+    "message": "Filter by Moved to Spam status",
+    "description": "Label for the moved to spam filter dropdown"
+  },
+  "SpamLog_filter_all": {
+    "message": "All",
+    "description": "Filter option to show all reports"
+  },
+  "SpamLog_filter_moved_yes": {
+    "message": "Yes",
+    "description": "Filter option to show only moved reports"
+  },
+  "SpamLog_filter_moved_no": {
+    "message": "No",
+    "description": "Filter option to show only not moved reports"
   }
 }

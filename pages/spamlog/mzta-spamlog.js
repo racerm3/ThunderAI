@@ -23,6 +23,7 @@ let taLog = null;
 let spamReport = null;
 let currentReportData = null;
 let currentSortState = { key: 'message_date', direction: 'desc' };
+let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', async () => {
     let prefs = await browser.storage.sync.get({ do_debug: false });
@@ -31,12 +32,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     i18n.updateDocument();
 
+    // Load saved filter setting
+    const savedFilter = await browser.storage.local.get({ spamlog_filter: 'all' });
+    currentFilter = savedFilter.spamlog_filter;
+
     initializeReportTableSorting();
+    initializeFilterDropdown();
     loadSpamReport();
 
     document.getElementById('btnRefreshSpamLog').addEventListener('click', loadSpamReport);
     document.getElementById('btnClearSpamLog').addEventListener('click', clearSpamLog);
 });
+
+function initializeFilterDropdown() {
+    const filterSelect = document.getElementById('filterMovedToSpam');
+    if (filterSelect) {
+        // Restore saved filter value
+        filterSelect.value = currentFilter;
+
+        filterSelect.addEventListener('change', async () => {
+            currentFilter = filterSelect.value;
+            // Save filter setting to storage
+            await browser.storage.local.set({ spamlog_filter: currentFilter });
+            if (currentReportData) {
+                populateTable(currentReportData, currentSortState.key, currentSortState.direction);
+            }
+        });
+    }
+}
 
 function initializeReportTableSorting() {
     document.querySelectorAll('#report_data thead th[data-sort-key]').forEach(header => {
@@ -138,6 +161,18 @@ async function loadSpamReport() {
     }
 }
 
+function shouldShowReport(report) {
+    switch (currentFilter) {
+        case 'moved':
+            return report.moved === true;
+        case 'not_moved':
+            return report.moved !== true;
+        case 'all':
+        default:
+            return true;
+    }
+}
+
 // Function to populate the table
 function populateTable(data, sortKey = currentSortState.key, sortDirection = currentSortState.direction) {
     const tableBody = document.getElementById("report_data_body");
@@ -146,6 +181,11 @@ function populateTable(data, sortKey = currentSortState.key, sortDirection = cur
     const reportRows = sortReportRows(Object.keys(data).map(email => ({ email, report: data[email] })), sortKey, sortDirection);
 
     reportRows.forEach(({ email, report }) => {
+        // Apply filter - skip rows that don't match the filter
+        if (!shouldShowReport(report)) {
+            return;
+        }
+
         // Create a new row
         const row = document.createElement("tr");
         if (report.moved) {
