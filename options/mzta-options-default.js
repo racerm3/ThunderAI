@@ -143,6 +143,7 @@ export const prefs_default = {
     spamfilter_skip_addresses: [],
     spamfilter_skip_addressbook: true,
     spamfilter_show_msg_panel: true,
+    spamfilter_blocked_sender_domains: [],
     summarize: false,
     summarize_auto: 1,                   // 0: disabled, 1: manual button, 2: automatic on message open, 3: generate on email receive
     summarize_auto_uselist: false,

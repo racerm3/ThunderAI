@@ -73,7 +73,18 @@
         <div class="btn_div"><button id="btn_save_skip_addresses" disabled>__MSG_save__</button></div>
         <br><label><input type="checkbox" id="spamfilter_skip_addressbook" name="spamfilter_skip_addressbook" class="option-input" /> <span class="opt_title">__MSG_prefs_OptionText_spamfilter_skip_addressbook__</span><br>__MSG_prefs_OptionText_spamfilter_skip_addressbook_Info__</label>
     </div>
+    <div id="spamfilter_blocked_domains_container">
+        <span class="section_title">__MSG_SpamFilter_blocked_domains_title__</span><span id="blocked_domains_unsaved" class="unsaved hidden"> __MSG_customPrompts_unsaved_changes__</span>
+        <br><span class="infoline">__MSG_SpamFilter_blocked_domains_infoline__
+            <br>__MSG_SpamFilter_blocked_domains_infoline2__</span>
+        <br><textarea id="spamfilter_blocked_sender_domains" rows="7"></textarea>
+        <div class="btn_div"><button id="btn_save_blocked_domains" disabled>__MSG_save__</button></div>
+    </div>
     <div id="spamfitler_reports_container">
+      <div class="btn_div_bottom">
+        <button id="btnRefreshPageBottom">__MSG_spamfilter_refresh__</button>
+        <button id="btnClearSpamLog">__MSG_SpamLog_clear_btn__</button>
+      </div>
       <div><span  class="section_title">__MSG_SpamReport_Title__</span></div>
       <table id="report_data">
           <thead>

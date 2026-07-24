@@ -926,11 +926,47 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                         await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
                         taWorkingStatus.stopWorking();
                         return { success: true };
-                    }
-                }
-            } catch (err) {
-                taLog.error("Error checking address book for sender: " + err);
-                // Fail open — continue with normal spam check
+                     }
+                 }
+             } catch (err) {
+                 taLog.error("Error checking address book for sender: " + err);
+                 // Fail open — continue with normal spam check
+             }
+         }
+
+        // Check if sender domain is in the blocked domains list
+        // Extract sender domain
+        let senderDomain = '';
+        if (senderEmail) {
+            const atIndex = senderEmail.lastIndexOf('@');
+            if (atIndex > 0) {
+                senderDomain = senderEmail.substring(atIndex + 1).toLowerCase();
+            }
+        }
+
+        if (senderDomain) {
+            let blockedDomains = await (options.blocked_domains || browser.storage.sync.get({spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains})).spamfilter_blocked_sender_domains;
+            if (blockedDomains && blockedDomains.includes(senderDomain)) {
+                taLog.log("Sender domain " + senderDomain + " is in the blocked domains list, skipping spam filter and deleting message.");
+
+                // Delete the message permanently
+                await browser.messages.delete([message.id], {deletePermanently: true});
+
+                let report_data = {};
+                report_data.report_date = new Date();
+                report_data.headerMessageId = headerMessageId;
+                report_data.spamValue = 100;
+                report_data.explanation = browser.i18n.getMessage('spamfilter_blocked_domain_explanation', senderDomain);
+                report_data.subject = curr_fullMessage.headers.subject;
+                report_data.from = curr_fullMessage.headers.from;
+                report_data.to = curr_fullMessage.headers.to;
+                report_data.message_date = new Date(message.date);
+                report_data.moved = true;
+                report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
+                spamReport.saveReportData(report_data, headerMessageId);
+                await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
+                taWorkingStatus.stopWorking();
+                return { success: true };
             }
         }
 
@@ -993,14 +1029,22 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         report_data.moved = false;
         report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
 
-        if (options.autoMove && jsonObj.spamValue >= report_data.SpamThreshold) {
+        // Check if we need to auto-block the sender domain
+        if (options.autoMove && jsonObj.spamValue >= report_data.SpamThreshold && senderDomain) {
+            // Add domain to blocked list
+            let currentBlockedDomains = await browser.storage.sync.get({spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains});
+            let blockedDomains = currentBlockedDomains.spamfilter_blocked_sender_domains || [];
+            if (!blockedDomains.includes(senderDomain)) {
+                blockedDomains.push(senderDomain);
+                blockedDomains = blockedDomains.sort();
+                await browser.storage.sync.set({spamfilter_blocked_sender_domains: blockedDomains});
+                taLog.log("Auto-blocked sender domain: " + senderDomain);
+            }
+            
             taLog.log("Marking as spam [" + headerMessageId + "]");
+            report_data.explanation = browser.i18n.getMessage('spamfilter_auto_blocked_domain_explanation', senderDomain);
             messenger.messages.update(message.id, { junk: true });
             
-            //let spamFolder = await messenger.folders.query({ accountId: message.folder.accountId, specialUse: ['junk'] });
-            //messenger.messages.move([message.id], spamFolder[0].id);
-            //taLog.log("Moved to spam folder [" + headerMessageId + "]");
-
             messenger.messages.delete([message.id], {deletePermanently: true});
             taLog.log("Permanently deleted [" + headerMessageId + "]");
 
@@ -1832,12 +1876,14 @@ async function processEmails(args) {
             spamfilter_enabled_accounts: prefs_default.spamfilter_enabled_accounts,
             spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses,
             spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook,
+            spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains,
             ...getDynamicSettingsDefaults(['use_specific_integration', 'connection_type']),
             do_debug: prefs_default.do_debug,
         });
         //  console.log(">>>>>>>>>>>>>>>> prefs_aats: " + JSON.stringify(prefs_aats));
         let spamfilter_skip_addresses = prefs_aats.spamfilter_skip_addresses;
         let spamfilter_skip_addressbook = prefs_aats.spamfilter_skip_addressbook;
+        let spamfilter_blocked_sender_domains = prefs_aats.spamfilter_blocked_sender_domains;
 
         for await (let message of messages) {
             let curr_fullMessage = null;
@@ -1938,14 +1984,15 @@ async function processEmails(args) {
                     }
                 }
                 if (!skipSpamFilter) {
-                    await _generateSpamReportForMessage(
-                        message.headerMessageId,
-                        {
-                            messageData: { message, fullMessage: curr_fullMessage, body_text, msg_text },
-                            prefs: prefs_aats,
-                            autoMove: true,
-                            skip_addresses: spamfilter_skip_addresses
-                        });
+                await _generateSpamReportForMessage(
+                    message.headerMessageId,
+                    {
+                        messageData: { message, fullMessage: curr_fullMessage, body_text, msg_text },
+                        prefs: prefs_aats,
+                        autoMove: true,
+                        skip_addresses: spamfilter_skip_addresses,
+                        blocked_domains: spamfilter_blocked_sender_domains
+                    });
                 }
             }
 

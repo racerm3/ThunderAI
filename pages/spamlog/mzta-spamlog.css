@@ -100,6 +100,25 @@ tr.spam-report-moved td {
     font-size: 1.2em;
 }
 
+.block-sender-btn {
+    padding: 4px 8px;
+    font-size: 0.85em;
+    cursor: pointer;
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 3px;
+}
+
+.block-sender-btn:hover {
+    background-color: #cc0000;
+}
+
+.block-sender-btn:disabled {
+    background-color: #888;
+    cursor: default;
+}
+
 @media (prefers-color-scheme: dark) {
     body {
         background-color: #1C1B22;

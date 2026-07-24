@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('skip_addresses_unsaved').classList.add('hidden');
     });
 
-    // Address book skip option
+// Address book skip option
     let skip_addressbook_checkbox = document.getElementById('spamfilter_skip_addressbook');
     let prefs_skip_ab = await browser.storage.sync.get({ spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook });
     skip_addressbook_checkbox.checked = prefs_skip_ab.spamfilter_skip_addressbook;
@@ -183,6 +183,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             await browser.storage.sync.set({ spamfilter_skip_addressbook: false });
         }
+    });
+
+    // Blocked sender domains list
+    let blocked_domains_textarea = document.getElementById('spamfilter_blocked_sender_domains');
+    let blocked_domains_save_btn = document.getElementById('btn_save_blocked_domains');
+
+    let blocked_domains_value = await spamfilter_getBlockedDomains();
+    let blocked_domains_string = blocked_domains_value.join('\n');
+
+    blocked_domains_textarea.value = blocked_domains_string;
+
+    blocked_domains_textarea.addEventListener('input', (event) => {
+        blocked_domains_save_btn.disabled = (event.target.value === blocked_domains_string);
+        if(blocked_domains_save_btn.disabled){
+            document.getElementById('blocked_domains_unsaved').classList.add('hidden');
+        } else {
+            document.getElementById('blocked_domains_unsaved').classList.remove('hidden');
+        }
+    });
+
+    blocked_domains_save_btn.addEventListener('click', () => {
+        let blocked_array_new = normalizeStringList(blocked_domains_textarea.value, 2);
+        spamfilter_setBlockedDomains(blocked_array_new);
+        blocked_domains_save_btn.disabled = true;
+        blocked_domains_string = blocked_array_new.join('\n');
+        blocked_domains_textarea.value = blocked_domains_string;
+        document.getElementById('blocked_domains_unsaved').classList.add('hidden');
     });
 
      //Accounts manager
@@ -234,10 +261,21 @@ document.addEventListener('DOMContentLoaded', async () => {
        checkboxes.forEach(checkbox => checkbox.checked = true);
      });
      
-     document.getElementById('accounts_deselect_all').addEventListener('click', () => {
-       let checkboxes = document.querySelectorAll('.accountCheckbox');
-       checkboxes.forEach(checkbox => checkbox.checked = false);
-     });
+      document.getElementById('accounts_deselect_all').addEventListener('click', () => {
+        let checkboxes = document.querySelectorAll('.accountCheckbox');
+        checkboxes.forEach(checkbox => checkbox.checked = false);
+      });
+
+    // Refresh Spam Log button
+    document.getElementById('btnRefreshPageBottom').addEventListener('click', loadSpamReport);
+
+    // Clear Spam Log button
+    document.getElementById('btnClearSpamLog').addEventListener('click', async () => {
+        if (confirm(browser.i18n.getMessage("SpamLog_clear_confirm"))) {
+            await spamReport.clearReportData();
+            loadSpamReport();
+        }
+    });
 
     initializeReportTableSorting();
     loadSpamReport();
@@ -535,4 +573,13 @@ async function spamfilter_getSkipAddresses() {
 
 function spamfilter_setSkipAddresses(spamfilter_skip_addresses) {
     browser.storage.sync.set({spamfilter_skip_addresses: spamfilter_skip_addresses});
+}
+
+async function spamfilter_getBlockedDomains() {
+    let prefs = await browser.storage.sync.get({spamfilter_blocked_sender_domains: []});
+    return prefs.spamfilter_blocked_sender_domains;
+}
+
+function spamfilter_setBlockedDomains(spamfilter_blocked_sender_domains) {
+    browser.storage.sync.set({spamfilter_blocked_sender_domains: spamfilter_blocked_sender_domains});
 }

@@ -174,9 +174,13 @@ function shouldShowReport(report) {
 }
 
 // Function to populate the table
-function populateTable(data, sortKey = currentSortState.key, sortDirection = currentSortState.direction) {
+async function populateTable(data, sortKey = currentSortState.key, sortDirection = currentSortState.direction) {
     const tableBody = document.getElementById("report_data_body");
     tableBody.innerHTML = ""; // Clear table before inserting new data
+
+    // Get blocked domains to check against
+    const blockedPrefs = await browser.storage.sync.get({ spamfilter_blocked_sender_domains: [] });
+    const blockedDomains = blockedPrefs.spamfilter_blocked_sender_domains || [];
 
     const reportRows = sortReportRows(Object.keys(data).map(email => ({ email, report: data[email] })), sortKey, sortDirection);
 
@@ -221,9 +225,53 @@ function populateTable(data, sortKey = currentSortState.key, sortDirection = cur
         tdExplanation.textContent = report.explanation;
         row.appendChild(tdExplanation);
 
+        // Create Block Sender button cell
+        const tdBlock = document.createElement("td");
+        const blockButton = document.createElement("button");
+        const sender = Array.isArray(report.from) ? report.from.join(", ") : report.from;
+        const domain = extractDomain(sender);
+        const isAlreadyBlocked = domain && blockedDomains.includes(domain);
+        
+        blockButton.textContent = isAlreadyBlocked ? browser.i18n.getMessage("spamlog_blocked_label") : browser.i18n.getMessage("spamlog_block_button");
+        blockButton.className = "block-sender-btn";
+        blockButton.dataset.sender = sender;
+        blockButton.disabled = isAlreadyBlocked;
+        blockButton.addEventListener("click", async () => {
+            if (domain) {
+                await blockSenderDomain(domain);
+                blockButton.disabled = true;
+                blockButton.textContent = browser.i18n.getMessage("spamlog_blocked_label");
+            }
+        });
+        tdBlock.appendChild(blockButton);
+        row.appendChild(tdBlock);
+
         // Append the row to the table
         tableBody.appendChild(row);
     });
+}
+
+// Helper function to extract domain from sender email
+function extractDomain(sender) {
+    if (!sender) return null;
+    const emailMatch = sender.match(/[\w.-]+@[\w.-]+\.\w+/);
+    if (emailMatch) {
+        const email = emailMatch[0];
+        return email.substring(email.lastIndexOf('@') + 1).toLowerCase();
+    }
+    return null;
+}
+
+// Add domain to blocked sender list
+async function blockSenderDomain(domain) {
+    if (!domain) return;
+    const prefs = await browser.storage.sync.get({ spamfilter_blocked_sender_domains: [] });
+    let blockedDomains = prefs.spamfilter_blocked_sender_domains || [];
+    if (!blockedDomains.includes(domain)) {
+        blockedDomains.push(domain);
+        blockedDomains = blockedDomains.sort();
+        await browser.storage.sync.set({ spamfilter_blocked_sender_domains: blockedDomains });
+    }
 }
 
 async function clearSpamLog() {

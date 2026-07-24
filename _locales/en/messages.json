@@ -2141,7 +2141,7 @@
        "description": ""
    },
    "spamfilter_refresh": {
-       "message": "Refresh spam report",
+       "message": "Refresh",
        "description": ""
    },
    "spamfilter_delete": {
@@ -2463,5 +2463,47 @@
   "SpamLog_filter_moved_no": {
     "message": "No",
     "description": "Filter option to show only not moved reports"
+  },
+  "Block_Sender": {
+    "message": "Block Sender",
+    "description": "Column header for blocking sender domains in spam log"
+  },
+  "spamlog_block_button": {
+    "message": "Block",
+    "description": "Button text to block a sender domain"
+  },
+  "spamlog_blocked_label": {
+    "message": "Blocked",
+    "description": "Label shown after a sender domain has been blocked"
+  },
+  "SpamFilter_blocked_domains_title": {
+    "message": "Blocked Sender List",
+    "description": "Title for the blocked sender domains section"
+  },
+  "SpamFilter_blocked_domains_infoline": {
+    "message": "Emails from these sender domains will be permanently deleted without spam filtering.",
+    "description": "Info text for blocked sender domains"
+  },
+  "SpamFilter_blocked_domains_infoline2": {
+    "message": "Add one domain per line, or separated by a comma.",
+    "description": "Info text for format of blocked domains list"
+  },
+  "spamfilter_blocked_domain_explanation": {
+    "message": "Sender domain blocked: $1",
+    "description": "Explanation shown when a message is deleted due to blocked domain",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "spamfilter_auto_blocked_domain_explanation": {
+    "message": "Sender domain auto-blocked: $1 (spam score >= threshold)",
+    "description": "Explanation shown when a message is auto-blocked due to high spam score",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
   }
 }
