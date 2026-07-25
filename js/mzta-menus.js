@@ -108,7 +108,7 @@ export class mzta_Menus {
         };
     
         curr_menu_entry.act = async () => {
-            taWorkingStatus.startWorking();
+            //taWorkingStatus.startWorking();
             const tabs = await browser.tabs.query({ active: true, currentWindow: true });
             const msg_text = await getMailBody(tabs, placeholdersUtils.hasPlaceholder(curr_prompt.text,'mail_typed_text'));
 

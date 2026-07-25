@@ -660,7 +660,7 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
         }
 
         await summaryStore.setProcessing(headerMessageId);
-        taWorkingStatus.startWorking();
+        //taWorkingStatus.startWorking();
         if (tabId) browser.tabs.sendMessage(tabId, { command: "showSummaryGenerating" });
 
         let message, fullMessage;
@@ -753,7 +753,7 @@ async function _generateTranslationForMessage(headerMessageId, tabId = null, opt
         }
 
         await translationStore.setProcessing(headerMessageId);
-        taWorkingStatus.startWorking();
+        //taWorkingStatus.startWorking();
         if (tabId) browser.tabs.sendMessage(tabId, { command: "showTranslationGenerating" });
 
         let fullMessage;
@@ -1855,7 +1855,7 @@ async function processEmails(args) {
         isAutoMode = false,
     } = args;
 
-    taWorkingStatus.startWorking();
+    //taWorkingStatus.startWorking();
 
     // One loop handles addTagsAuto, spamFilter, summarizeOnReceive, summarizeAutoUseList, and translateOnReceive (on email receive).
     // The separate summarize block below handles the context menu flow.
