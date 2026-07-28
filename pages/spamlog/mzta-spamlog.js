@@ -39,10 +39,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeReportTableSorting();
     initializeFilterDropdown();
     loadSpamReport();
+    initializeStorageListener();
 
     document.getElementById('btnRefreshSpamLog').addEventListener('click', loadSpamReport);
     document.getElementById('btnClearSpamLog').addEventListener('click', clearSpamLog);
 });
+
+function initializeStorageListener() {
+    browser.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local') return;
+
+        for (const key of Object.keys(changes)) {
+            // Spam records are stored with the prefix "msg:"
+            if (key.startsWith('msg:')) {
+                const change = changes[key];
+                // Refresh when a new record is added (oldValue undefined) or updated
+                if (change.oldValue === undefined || change.newValue !== undefined) {
+                    loadSpamReport();
+                    return;
+                }
+            }
+        }
+    });
+}
 
 function initializeFilterDropdown() {
     const filterSelect = document.getElementById('filterMovedToSpam');
