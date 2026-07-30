@@ -856,7 +856,15 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         return { success: false };
     }
             message = messageResult.messages[0];
-            curr_fullMessage = await browser.messages.getFull(message.id);
+            try {
+                curr_fullMessage = await browser.messages.getFull(message.id);
+            } catch (e) {
+                taLog.warn("Message " + message.id + " was deleted before spam analysis could complete: " + e);
+                let err_data = await spamReport.saveError(headerMessageId, "Message was deleted before spam analysis could complete");
+                await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
+                taWorkingStatus.stopWorking();
+                return { success: false };
+            }
             msg_text = await getMailBody(curr_fullMessage);
             body_text = htmlBodyToPlainText(msg_text.html);
             if (body_text.length == 0) {
@@ -1891,7 +1899,12 @@ async function processEmails(args) {
             let body_text = '';
     
             if (addTagsAuto || spamFilter) {
-                curr_fullMessage = await browser.messages.getFull(message.id);
+                try {
+                    curr_fullMessage = await browser.messages.getFull(message.id);
+                } catch (e) {
+                    taLog.warn("Message " + message.id + " was deleted by a filter, skipping: " + e);
+                    continue;
+                }
                 msg_text = await getMailBody(curr_fullMessage);
                 taLog.log("Starting from the HTML body if present and converting to plain text...");
                 body_text = htmlBodyToPlainText(msg_text.html);
