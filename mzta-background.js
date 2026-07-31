@@ -822,6 +822,20 @@ async function _generateTranslationForMessage(headerMessageId, tabId = null, opt
     }
 }
 
+// Resolve the account identity (email address) for the message, falling back to the raw To header
+// if the identity cannot be determined.
+async function _getReportToAddress(message, curr_fullMessage) {
+    try {
+        const currentIdentity = await getCurrentIdentity(message, true);
+        if (currentIdentity && currentIdentity.email) {
+            return currentIdentity.email;
+        }
+    } catch (e) {
+        taLog.error("Error getting current identity for report 'to' field: " + e);
+    }
+    return curr_fullMessage.headers.to;
+}
+
 // options.messageData: { message, fullMessage, body_text, msg_text } — pass pre-fetched data to avoid re-querying
 // options.prefs: pass pre-fetched prefs to avoid re-querying
 // options.autoMove: if true, move spam messages to junk folder (default: false)
@@ -887,7 +901,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 report_data.explanation = browser.i18n.getMessage('spamfilter_skip_addresses_explanation');
                 report_data.subject = curr_fullMessage.headers.subject;
                 report_data.from = curr_fullMessage.headers.from;
-                report_data.to = curr_fullMessage.headers.to;
+                report_data.to = await _getReportToAddress(message, curr_fullMessage);
                 report_data.message_date = new Date(message.date);
                 report_data.moved = false;
                 report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
@@ -926,7 +940,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                         report_data.explanation = browser.i18n.getMessage('spamfilter_skip_addressbook_explanation');
                         report_data.subject = curr_fullMessage.headers.subject;
                         report_data.from = curr_fullMessage.headers.from;
-                        report_data.to = curr_fullMessage.headers.to;
+                        report_data.to = await _getReportToAddress(message, curr_fullMessage);
                         report_data.message_date = new Date(message.date);
                         report_data.moved = false;
                         report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
@@ -967,7 +981,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 report_data.explanation = browser.i18n.getMessage('spamfilter_blocked_domain_explanation', senderDomain);
                 report_data.subject = curr_fullMessage.headers.subject;
                 report_data.from = curr_fullMessage.headers.from;
-                report_data.to = curr_fullMessage.headers.to;
+                report_data.to = await _getReportToAddress(message, curr_fullMessage);
                 report_data.message_date = new Date(message.date);
                 report_data.moved = true;
                 report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
@@ -1032,7 +1046,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         report_data.explanation = jsonObj.explanation;
         report_data.subject = curr_fullMessage.headers.subject;
         report_data.from = curr_fullMessage.headers.from;
-        report_data.to = curr_fullMessage.headers.to;
+        report_data.to = await _getReportToAddress(message, curr_fullMessage);
         report_data.message_date = new Date(message.date);
         report_data.moved = false;
         report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
