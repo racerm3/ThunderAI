@@ -76,6 +76,19 @@ export class taSummaryStore {
             this.taLog.log("[loadSummary] no record found for data_id: " + data_id);
             return null;
         }
+
+        // Check if the message still exists. If not, remove the orphaned cache record.
+        try {
+            const messageResult = await browser.messages.query({ headerMessageId: data_id });
+            if (!messageResult || messageResult.messages.length === 0) {
+                this.taLog.log("[loadSummary] message was deleted, removing orphaned summary cache");
+                await this.removeSummary(data_id);
+                return null;
+            }
+        } catch (e) {
+            this.taLog.warn("[loadSummary] error checking message existence, using cached data: " + e);
+        }
+
         let summary = record.summary;
         return {
             headerMessageId: data_id,
