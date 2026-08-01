@@ -861,6 +861,17 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             curr_fullMessage = options.messageData.fullMessage;
             msg_text = options.messageData.msg_text;
             body_text = options.messageData.body_text;
+
+            // Verify the message still exists — it may have been deleted by a custom filter
+            // between the time processEmails fetched the data and now.
+            try {
+                await browser.messages.get(message.id);
+            } catch (e) {
+                taLog.warn("Message " + message.id + " was deleted by a filter, skipping spam analysis: " + e);
+                await spamReport.removeReportData(headerMessageId);
+                taWorkingStatus.stopWorking();
+                return { success: false };
+            }
         } else {
     const messageResult = await browser.messages.query({ headerMessageId: headerMessageId });
     if (!messageResult || messageResult.messages.length === 0) {
@@ -971,8 +982,12 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             if (blockedDomains && blockedDomains.includes(senderDomain)) {
                 taLog.log("Sender domain " + senderDomain + " is in the blocked domains list, skipping spam filter and deleting message.");
 
-                // Delete the message permanently
-                await browser.messages.delete([message.id], {deletePermanently: true});
+                // Delete the message permanently (may already be deleted by a custom filter)
+                try {
+                    await browser.messages.delete([message.id], {deletePermanently: true});
+                } catch (e) {
+                    taLog.warn("Message " + message.id + " was already deleted, skipping delete: " + e);
+                }
 
                 let report_data = {};
                 report_data.report_date = new Date();
@@ -1065,10 +1080,13 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             
             taLog.log("Marking as spam [" + headerMessageId + "]");
             report_data.explanation = browser.i18n.getMessage('spamfilter_auto_blocked_domain_explanation', senderDomain);
-            messenger.messages.update(message.id, { junk: true });
-            
-            messenger.messages.delete([message.id], {deletePermanently: true});
-            taLog.log("Permanently deleted [" + headerMessageId + "]");
+            try {
+                messenger.messages.update(message.id, { junk: true });
+                messenger.messages.delete([message.id], {deletePermanently: true});
+                taLog.log("Permanently deleted [" + headerMessageId + "]");
+            } catch (e) {
+                taLog.warn("Message " + message.id + " was already deleted, skipping move/delete: " + e);
+            }
 
             report_data.moved = true;
         }
