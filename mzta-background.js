@@ -2029,15 +2029,15 @@ async function processEmails(args) {
                     }
                 }
                 if (!skipSpamFilter) {
-                await _generateSpamReportForMessage(
-                    message.headerMessageId,
-                    {
-                        messageData: { message, fullMessage: curr_fullMessage, body_text, msg_text },
-                        prefs: prefs_aats,
-                        autoMove: true,
-                        skip_addresses: spamfilter_skip_addresses,
-                        blocked_domains: spamfilter_blocked_sender_domains
-                    });
+                    await _generateSpamReportForMessage(
+                        message.headerMessageId,
+                        {
+                            messageData: { message, fullMessage: curr_fullMessage, body_text, msg_text },
+                            prefs: prefs_aats,
+                            autoMove: true,
+                            skip_addresses: spamfilter_skip_addresses,
+                            blocked_domains: spamfilter_blocked_sender_domains
+                        });
                 }
             }
 
@@ -2108,6 +2108,16 @@ async function processEmails(args) {
 
 let listenAllFolders = !prefs_init.add_tags_auto_only_inbox || prefs_init.summarize_auto_uselist;
 browser.messages.onNewMailReceived.addListener(newEmailListener, listenAllFolders);
+
+// Clean up orphaned summary cache records on startup (delayed 60 seconds to let Thunderbird settle)
+setTimeout(async () => {
+    await summaryStore.cleanupOrphanedSummaries();
+}, 60000);
+
+// Periodically clean up orphaned summary cache records for deleted emails (every 15 minutes)
+setInterval(async () => {
+    await summaryStore.cleanupOrphanedSummaries();
+}, 900000);
 
 // Inject script and CSS in all already open message tabs.
 let openTabs = await messenger.tabs.query();

@@ -71,22 +71,16 @@ export class taSummaryStore {
 
     async loadSummary(data_id) {
         this.taLog.log("[loadSummary] data_id: " + data_id);
+
+        // Fire-and-forget orphaned summary cleanup in the background — don't block the user.
+        this.cleanupOrphanedSummaries().catch(e => {
+            this.taLog.warn("[loadSummary] background orphan cleanup error: " + e);
+        });
+
         let record = await this._storage.getRecord(data_id);
         if (!record || !this._storage.hasField(record, taStorage.FIELD_SUMMARY)) {
             this.taLog.log("[loadSummary] no record found for data_id: " + data_id);
             return null;
-        }
-
-        // Check if the message still exists. If not, remove the orphaned cache record.
-        try {
-            const messageResult = await browser.messages.query({ headerMessageId: data_id });
-            if (!messageResult || messageResult.messages.length === 0) {
-                this.taLog.log("[loadSummary] message was deleted, removing orphaned summary cache");
-                await this.removeSummary(data_id);
-                return null;
-            }
-        } catch (e) {
-            this.taLog.warn("[loadSummary] error checking message existence, using cached data: " + e);
         }
 
         let summary = record.summary;
@@ -141,6 +135,31 @@ export class taSummaryStore {
                 await this._storage.deleteSummaryField(keys[i]);
             }
         }
+    }
+
+    /**
+     * Remove summary cache records for messages that no longer exist.
+     * @returns {Promise<number>} The number of removed records.
+     */
+    async cleanupOrphanedSummaries() {
+        this.taLog.log("[cleanupOrphanedSummaries] checking for orphaned summary records");
+        let data = await this._storage.getAllSummaryRecords();
+        let keys = Object.keys(data);
+        let removed = 0;
+        for (let messageId of keys) {
+            try {
+                const messageResult = await browser.messages.query({ headerMessageId: messageId });
+                if (!messageResult || messageResult.messages.length === 0) {
+                    this.taLog.log("[cleanupOrphanedSummaries] removing summary for deleted message: " + messageId);
+                    await this.removeSummary(messageId);
+                    removed++;
+                }
+            } catch (e) {
+                this.taLog.warn("[cleanupOrphanedSummaries] error checking message " + messageId + ": " + e);
+            }
+        }
+        this.taLog.log("[cleanupOrphanedSummaries] removed " + removed + " orphaned summary records");
+        return removed;
     }
 
     sortSummariesByDate(data) {
