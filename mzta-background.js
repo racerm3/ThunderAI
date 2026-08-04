@@ -862,6 +862,12 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             msg_text = options.messageData.msg_text;
             body_text = options.messageData.body_text;
 
+            // Wait a short delay to give Thunderbird's custom filters time to run and
+            // potentially delete this message before we start the AI spam analysis.
+            // This mitigates the race condition where a custom filter deletes the email
+            // while the spam filter is still processing it.
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
             // Verify the message still exists — it may have been deleted by a custom filter
             // between the time processEmails fetched the data and now.
             try {
