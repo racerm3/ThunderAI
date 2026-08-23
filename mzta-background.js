@@ -836,6 +836,28 @@ async function _getReportToAddress(message, curr_fullMessage) {
     return curr_fullMessage.headers.to;
 }
 
+// Build a lightweight metadata snapshot (subject, from, to, message_date) for spam
+// report entries. Prefers the full MIME headers, but falls back to the MessageHeader
+// fields (message.subject / author / recipients), which remain readable even after
+// the underlying message storage is gone. This keeps the spam log populated in the
+// race condition where a custom filter deletes a message while it is being analyzed.
+async function _buildReportMetadata(message, curr_fullMessage) {
+    const headers = (curr_fullMessage && curr_fullMessage.headers) || {};
+    const isEmpty = (v) => v === undefined || v === null || (Array.isArray(v) && v.length === 0);
+    let subject = isEmpty(headers.subject) ? (message.subject ? [message.subject] : undefined) : headers.subject;
+    let from = isEmpty(headers.from) ? (message.author ? [message.author] : undefined) : headers.from;
+    let to = await _getReportToAddress(message, curr_fullMessage);
+    if (isEmpty(to)) {
+        to = (message.recipients && message.recipients.length > 0) ? [...message.recipients] : undefined;
+    }
+    return {
+        subject: subject,
+        from: from,
+        to: to,
+        message_date: message.date ? new Date(message.date) : undefined
+    };
+}
+
 // options.messageData: { message, fullMessage, body_text, msg_text } — pass pre-fetched data to avoid re-querying
 // options.prefs: pass pre-fetched prefs to avoid re-querying
 // options.autoMove: if true, move spam messages to junk folder (default: false)
@@ -855,6 +877,9 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         await updateSpamPanel(headerMessageId, "showSpamCheckInProgress");
 
         let message, curr_fullMessage, msg_text, body_text;
+        // Snapshot of subject/from/to/message_date captured early so spam log entries
+        // stay populated even if the message is deleted mid-analysis (race condition).
+        let message_metadata = null;
 
         if (options.messageData) {
             message = options.messageData.message;
@@ -872,6 +897,8 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 taWorkingStatus.stopWorking();
                 return { success: false };
             }
+            message_metadata = await _buildReportMetadata(message, curr_fullMessage);
+
         } else {
             const messageResult = await browser.messages.query({ headerMessageId: headerMessageId });
             if (!messageResult || messageResult.messages.length === 0) {
@@ -881,11 +908,14 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 return { success: false };
             }
             message = messageResult.messages[0];
+            // Snapshot from the MessageHeader before getFull — MessageHeader fields survive deletion.
+            message_metadata = await _buildReportMetadata(message, null);
             try {
                 curr_fullMessage = await browser.messages.getFull(message.id);
+                message_metadata = await _buildReportMetadata(message, curr_fullMessage);
             } catch (e) {
                 taLog.warn("Message " + message.id + " was deleted before spam analysis could complete: " + e);
-                let err_data = await spamReport.saveError(headerMessageId, "Message was deleted before spam analysis could complete");
+                let err_data = await spamReport.saveError(headerMessageId, "Message was deleted before spam analysis could complete", message_metadata || {});
                 await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
                 taWorkingStatus.stopWorking();
                 return { success: false };
@@ -910,10 +940,10 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 report_data.headerMessageId = headerMessageId;
                 report_data.spamValue = 0;
                 report_data.explanation = browser.i18n.getMessage('spamfilter_skip_addresses_explanation');
-                report_data.subject = curr_fullMessage.headers.subject;
-                report_data.from = curr_fullMessage.headers.from;
-                report_data.to = await _getReportToAddress(message, curr_fullMessage);
-                report_data.message_date = new Date(message.date);
+                report_data.subject = message_metadata.subject;
+                report_data.from = message_metadata.from;
+                report_data.to = message_metadata.to;
+                report_data.message_date = message_metadata.message_date;
                 report_data.moved = false;
                 report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
                 spamReport.saveReportData(report_data, headerMessageId);
@@ -949,10 +979,10 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                         report_data.headerMessageId = headerMessageId;
                         report_data.spamValue = 0;
                         report_data.explanation = browser.i18n.getMessage('spamfilter_skip_addressbook_explanation');
-                        report_data.subject = curr_fullMessage.headers.subject;
-                        report_data.from = curr_fullMessage.headers.from;
-                        report_data.to = await _getReportToAddress(message, curr_fullMessage);
-                        report_data.message_date = new Date(message.date);
+                        report_data.subject = message_metadata.subject;
+                        report_data.from = message_metadata.from;
+                        report_data.to = message_metadata.to;
+                        report_data.message_date = message_metadata.message_date;
                         report_data.moved = false;
                         report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
                         spamReport.saveReportData(report_data, headerMessageId);
@@ -994,10 +1024,10 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 report_data.headerMessageId = headerMessageId;
                 report_data.spamValue = 100;
                 report_data.explanation = browser.i18n.getMessage('spamfilter_blocked_domain_explanation', senderDomain);
-                report_data.subject = curr_fullMessage.headers.subject;
-                report_data.from = curr_fullMessage.headers.from;
-                report_data.to = await _getReportToAddress(message, curr_fullMessage);
-                report_data.message_date = new Date(message.date);
+                report_data.subject = message_metadata.subject;
+                report_data.from = message_metadata.from;
+                report_data.to = message_metadata.to;
+                report_data.message_date = message_metadata.message_date;
                 report_data.moved = true;
                 report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
                 spamReport.saveReportData(report_data, headerMessageId);
@@ -1053,7 +1083,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             spamfilter_result = (await cmd_spamfilter.sendPrompt()).trim();
         } catch (err) {
             console.error("[ThunderAI | SpamFilter] Error getting spamfilter: ", err);
-            let err_data = await spamReport.saveError(headerMessageId, err.message || String(err));
+            let err_data = await spamReport.saveError(headerMessageId, err.message || String(err), message_metadata || {});
             await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
             taWorkingStatus.stopWorking();
             return { success: false };
@@ -1066,7 +1096,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             jsonObj = extractJsonObject(spamfilter_result);
         } catch (e) {
             console.error("[ThunderAI | SpamFilter] Error extracting JSON from AI response: ", e);
-            let err_data = await spamReport.saveError(headerMessageId, e.message || String(e));
+            let err_data = await spamReport.saveError(headerMessageId, e.message || String(e), message_metadata || {});
             await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
             taWorkingStatus.stopWorking();
             return { success: false };
@@ -1089,10 +1119,10 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         report_data.headerMessageId = headerMessageId;
         report_data.spamValue = jsonObj.spamValue;
         report_data.explanation = jsonObj.explanation;
-        report_data.subject = curr_fullMessage.headers.subject;
-        report_data.from = curr_fullMessage.headers.from;
-        report_data.to = await _getReportToAddress(message, curr_fullMessage);
-        report_data.message_date = new Date(message.date);
+        report_data.subject = message_metadata.subject;
+        report_data.from = message_metadata.from;
+        report_data.to = message_metadata.to;
+        report_data.message_date = message_metadata.message_date;
         report_data.moved = false;
         report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
 
@@ -1142,7 +1172,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         if (error.isConfigError) {
             await updateSpamPanel(headerMessageId, "showSpamReport", { spamValue: -999, explanation: error.message || String(error) });
         } else {
-            let err_data = await spamReport.saveError(headerMessageId, error.message || String(error));
+            let err_data = await spamReport.saveError(headerMessageId, error.message || String(error), message_metadata || {});
             await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
         }
         taWorkingStatus.stopWorking();
