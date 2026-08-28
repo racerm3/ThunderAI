@@ -18,6 +18,17 @@
 
 
 
+import { fetchWithRetry } from './mzta-fetch-retry.js';
+
+export const GEMINI_FALLBACK_MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
+  'gemini-3.7-flash'
+];
+
 export class GoogleGemini {
 
   apiKey = '';
@@ -52,7 +63,7 @@ export class GoogleGemini {
 
   fetchModels = async () => {
     try{
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + this.apiKey, {
+      const response = await fetchWithRetry("https://generativelanguage.googleapis.com/v1beta/models?key=" + this.apiKey, {
           method: "GET",
           headers: {
               "Content-Type": "application/json"
@@ -118,14 +129,55 @@ export class GoogleGemini {
 
       //  console.log(">>>>>>>>>>>>>>>>> [ThunderAI] Google Gemini API request: " + JSON.stringify(google_gemini_body));
 
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + this.model + ":" + (this.stream ? 'streamGenerateContent?alt=sse&' : 'generateContent?') + "key=" + this.apiKey, {
-          method: "POST",
-          headers: { 
-              "Content-Type": "application/json"
-          },
-          body: JSON.stringify(google_gemini_body),
-      });
-      return response;
+      const modelsToTry = [this.model, ...GEMINI_FALLBACK_MODELS.filter(m => m !== this.model && m !== '')];
+      let lastResponse = null;
+      let lastError = null;
+
+      for (let i = 0; i < modelsToTry.length; i++) {
+        const currentModel = modelsToTry[i];
+        if (!currentModel) continue;
+
+        try {
+          const url = "https://generativelanguage.googleapis.com/v1beta/models/" + currentModel + ":" + (this.stream ? 'streamGenerateContent?alt=sse&' : 'generateContent?') + "key=" + this.apiKey;
+          const response = await fetchWithRetry(url, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(google_gemini_body),
+          });
+
+          if (response.ok) {
+            return response;
+          }
+
+          lastResponse = response;
+
+          // If this is a non-retryable authentication error, do not rotate
+          if (response.status === 401 || response.status === 403) {
+            return response;
+          }
+
+          if (i < modelsToTry.length - 1) {
+            console.warn(`[ThunderAI] Google Gemini model "${currentModel}" failed with status ${response.status}. Rotating to fallback model "${modelsToTry[i + 1]}"...`);
+          }
+        } catch (err) {
+          lastError = err;
+          if (i < modelsToTry.length - 1) {
+            console.warn(`[ThunderAI] Google Gemini model "${currentModel}" encountered error: ${err.message}. Rotating to fallback model "${modelsToTry[i + 1]}"...`);
+          }
+        }
+      }
+
+      if (lastResponse) {
+        return lastResponse;
+      }
+
+      if (lastError) {
+        throw lastError;
+      }
+
+      throw new Error("No Gemini models available to try.");
     }catch (error) {
         console.error("[ThunderAI] Google Gemini API request failed: " + error);
         let output = {};

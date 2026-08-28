@@ -99,6 +99,16 @@ mzta-background.js
 
 This keeps API calls off the main thread and avoids blocking the Thunderbird UI.
 
+## Automatic Retry Handling
+
+All API providers use `fetchWithRetry` (`js/api/mzta-fetch-retry.js`) for outbound requests (`fetchResponse` and `fetchModels`).
+
+- **Retryable HTTP statuses**: `408` (Request Timeout), `429` (Too Many Requests / Rate Limit), `500` (Internal Server Error), `502` (Bad Gateway), `503` (Service Unavailable / High Demand), `504` (Gateway Timeout), `529` (Site Overloaded).
+- **Network errors**: Network / fetch exceptions (e.g. temporary connection dropouts) are retried automatically.
+- **Backoff strategy**: Exponential backoff (default initial delay: 1s, max delay: 10s, max retries: 3) with support for standard `Retry-After` response headers.
+- **Non-retryable errors**: Client errors like `400` (Bad Request), `401` (Unauthorized), `403` (Forbidden), `404` (Not Found) fail immediately without retry.
+- **Google Gemini Model Rotation**: If all retries for the active Gemini model are exhausted due to high demand (503), rate limits (429), or server errors, the request automatically rotates through fallback free-tier Gemini models (`gemini-2.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.6-flash`, `gemini-3.7-flash`).
+
 ## Optional Permissions
 
 API calls require host permissions. These are declared as `optional_permissions` in `manifest.json` and requested at runtime:
