@@ -2068,6 +2068,14 @@
       "message": "Spam check in progress...",
       "description": ""
   },
+  "spam_click_to_analyze": {
+      "message": "Click here to run spam analysis",
+      "description": "Tooltip for the manual spam analysis button in the reading pane toolbar"
+  },
+  "get_ai_spam_analysis": {
+      "message": "AI Spam Check",
+      "description": "Label for the manual spam analysis button in the reading pane toolbar"
+  },
   "prefs_OptionText_summarize_auto": {
       "message": "Auto-summarize messages",
       "description": ""

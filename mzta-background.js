@@ -604,6 +604,9 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             browser.tabs.sendMessage(tabId, { command: "showSpamReport", data: report });
                         } else if (await spamReport.isProcessing(message.headerMessageId)) {
                             browser.tabs.sendMessage(tabId, { command: "showSpamCheckInProgress" });
+                        } else if (prefs_init.spamfilter) {
+                            // No cached report and not processing — show manual trigger button
+                            browser.tabs.sendMessage(tabId, { command: "showSpamButton", headerMessageId: message.headerMessageId });
                         }
                     } catch (e) {
                         taLog.error("Error in checkSpamReport: " + e);
@@ -616,6 +619,15 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 break;
             case 'refreshSpamReport':
                 _generateSpamReportForMessage(message.headerMessageId);
+                break;
+            case 'triggerSpamAnalysis':
+                async function _triggerSpamAnalysis(message) {
+                    let tabId = sender.tab.id;
+                    // Show loading indicator immediately before any await
+                    browser.tabs.sendMessage(tabId, { command: "showSpamCheckInProgress" });
+                    await _generateSpamReportForMessage(message.headerMessageId);
+                }
+                _triggerSpamAnalysis(message);
                 break;
             default:
                 break;

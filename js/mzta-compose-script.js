@@ -1058,6 +1058,37 @@ switch (message.command) {
     return Promise.resolve(true);
   }
 
+  case "showSpamButton": {
+    if (document.getElementById('mzta-toolbar-spam')) return Promise.resolve(true);
+
+    const colors = _getThemeColors();
+    const triggerBtn = document.createElement('div');
+    triggerBtn.title = browser.i18n.getMessage("spam_click_to_analyze") || "Click here to run spam analysis";
+    triggerBtn.style.cssText = `background-color: ${colors.spamLoading.bg}; border: 1px solid ${colors.spamLoading.border}; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; font-style: italic; opacity: 0.7; transition: opacity 0.2s; color: ${colors.spamLoading.text}; display: inline-flex; align-items: center; gap: 6px;`;
+
+    const triggerIcon = document.createElement('img');
+    triggerIcon.src = browser.runtime.getURL("/images/ai_spam.png");
+    triggerIcon.style.cssText = `height: 14px; width: 14px;${colors.isDark ? ' filter: invert(1);' : ''}`;
+    triggerBtn.appendChild(triggerIcon);
+
+    const triggerLabel = document.createElement('span');
+    triggerLabel.textContent = browser.i18n.getMessage("get_ai_spam_analysis") || "AI Spam Check";
+    triggerBtn.appendChild(triggerLabel);
+
+    triggerBtn.onmouseover = () => { triggerBtn.style.opacity = '1'; };
+    triggerBtn.onmouseout = () => { triggerBtn.style.opacity = '0.7'; };
+    triggerBtn.onclick = () => {
+        _removeToolbarItem('mzta-toolbar-spam');
+        browser.runtime.sendMessage({
+            command: "triggerSpamAnalysis",
+            headerMessageId: message.headerMessageId
+        });
+    };
+
+    _addToolbarItem('mzta-toolbar-spam', triggerBtn);
+    return Promise.resolve(true);
+  }
+
   case "showSummary": {
     _removePanel('mzta-summary-generating');
     _removePanel('mzta-summary-banner');
