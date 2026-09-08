@@ -49,6 +49,7 @@ import {
     convertNewlinesToParagraphs,
     getConnectionType,
     hasSpecificIntegration,
+    openTab,
 } from './js/mzta-utils.js';
 import { taPromptUtils } from './js/mzta-utils-prompt.js';
 import { mzta_specialCommand } from './js/mzta-special-commands.js';
@@ -126,6 +127,12 @@ messenger.commands.onCommand.addListener((command, tab) => {
     if (command === "_thunderai__do_action") {
         handleShortcut(tab);
     }
+});
+
+// Open the ThunderAI main configuration page in a new tab when the toolbar button is clicked.
+browser.browserAction.onClicked.addListener((tab, info) => {
+    taLog.log("Browser action clicked, opening ThunderAI options page");
+    openTab("options/mzta-options.html");
 });
 
 async function handleShortcut(tab) {

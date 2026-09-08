@@ -16,6 +16,10 @@
         "default_icon": "images/icon-32px.png",
         "default_popup": "popup/mzta-popup.html"
     },
+    "browser_action": {
+        "default_title": "__MSG_menu_title__",
+        "default_icon": "images/icon-16px.png"
+    },
     "compose_action": {
         "default_title": "__MSG_menu_title__",
         "default_icon": "images/icon-32px.png",

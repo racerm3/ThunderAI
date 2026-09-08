@@ -13,6 +13,24 @@ Content Script   →  js/lib/diff.js (injected into chatgpt.com)
 Web Workers      →  js/workers/model-worker-*.js (one per API provider)
 ```
 
+### Main Toolbar Button (browser_action)
+
+A `browser_action` manifest key places a ThunderAI icon button on Thunderbird's main
+mail tab toolbar (no `default_popup` is defined, so `browser.browserAction.onClicked`
+listener in `mzta-background.js` fires on click). The listener calls the `openTab()`
+helper from `js/mzta-utils.js` to open `options/mzta-options.html` in a new tab (or
+focus it if already open).
+
+```
+User clicks ThunderAI toolbar icon
+       ↓
+browser.browserAction.onClicked listener (mzta-background.js)
+       ↓
+openTab("options/mzta-options.html")   (js/mzta-utils.js)
+       ↓
+options/mzta-options.html opens in a new Thunderbird tab
+```
+
 ## Data Flow: User Action → AI Response
 
 ```

@@ -3,6 +3,10 @@
 
 
 
+<h2>Version 4.2.0</h2>
+      <ul>
+        <li>Added a ThunderAI icon button to the main toolbar that opens the ThunderAI configuration page in a new tab.</li>
+      </ul>
 <h2>Version 4.1.0 - 13/05/2026</h2>
       <ul>
         <li>Antispam information are now permanently saved for each message [<a href="https://github.com/micz/ThunderAI/issues/675">#675</a>].</li>
