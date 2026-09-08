@@ -200,7 +200,7 @@ export class taStorage {
      * Write the summary field for a given Message-ID.
      * @param {string} messageId - The Message-ID header string.
      * @param {object} summary_data - The summary data object with fields:
-     *   summary, error, message, summary_date.
+     *   summary, error, message, summary_date, subject, from, to, message_date.
      * @param {boolean} [force=true] - If true, overwrite existing summary data.
      */
     async writeSummary(messageId, summary_data, force = true) {
@@ -221,6 +221,12 @@ export class taStorage {
                 summary_date: summary_data.summary_date instanceof Date
                     ? summary_data.summary_date.toISOString()
                     : summary_data.summary_date,
+                subject: summary_data.subject,
+                from: summary_data.from,
+                to: summary_data.to,
+                message_date: summary_data.message_date instanceof Date
+                    ? summary_data.message_date.toISOString()
+                    : summary_data.message_date,
                 ts: now,
             };
             record.ts = now;
@@ -251,9 +257,14 @@ export class taStorage {
                 result[messageId] = {
                     headerMessageId: messageId,
                     summary: summary.summary,
+                    summary_html: summary.summary_html || '',
                     error: summary.error || false,
                     message: summary.message || '',
                     summary_date: new Date(summary.summary_date || summary.ts),
+                    subject: summary.subject,
+                    from: summary.from,
+                    to: summary.to,
+                    message_date: summary.message_date ? new Date(summary.message_date) : null,
                 };
             }
             this.taLog.log('[getAllSummaryRecords] found ' + Object.keys(result).length + ' summary records');

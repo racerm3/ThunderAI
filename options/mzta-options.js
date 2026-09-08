@@ -479,6 +479,9 @@ document.addEventListener('DOMContentLoaded', async () => {
    document.getElementById('btnManageSummarizeInfo').addEventListener('click', () => {
      openTab('/pages/summarize/mzta-summarize.html');
    });
+   document.getElementById('btnViewSummaryLog').addEventListener('click', () => {
+     openTab('/pages/summarylog/mzta-summarylog.html');
+   });
 
   document.getElementById('btnManageTranslateInfo').addEventListener('click', () => {
     openTab('/pages/translate/mzta-translate.html');

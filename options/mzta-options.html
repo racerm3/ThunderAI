@@ -212,6 +212,8 @@
         <label>
           <input type="checkbox" id="spamfilter" name="spamfilter" class="option-input" />
           __MSG_prefs_OptionText_spamfilter_Info__
+          <br><input type="checkbox" id="spamfilter_open_log_on_startup" name="spamfilter_open_log_on_startup" class="option-input" />
+          __MSG_prefs_OptionText_spamfilter_open_log_on_startup__
           <br><span class="warn_API_needed" id="spamfilter_warn_API_needed">__MSG_warn_API_needed__</span>
         </label>
       </td>
@@ -219,12 +221,15 @@
     <tr class="summarize_tr">
       <td><span class="opt_title">__MSG_prefs_OptionText_summarize__</span>
         <br><button id="btnManageSummarizeInfo" class="btn_small">__MSG_prefs_OptionText_btnManageSummarizeInfo__</button>
+        <br><button id="btnViewSummaryLog" class="btn_small">__MSG_prefs_OptionText_btnViewSummaryLog__</button>
         <br><span class="specific_api_indicator" id="summarize_specific_api_indicator"></span>
       </td>
       <td>
         <label>
           <input type="checkbox" id="summarize" name="summarize" class="option-input" />
           __MSG_prefs_OptionText_summarize_Info__
+          <br><input type="checkbox" id="summarize_open_log_on_startup" name="summarize_open_log_on_startup" class="option-input" />
+          __MSG_prefs_OptionText_summarize_open_log_on_startup__
           <br><span class="warn_API_needed" id="summarize_warn_API_needed">__MSG_warn_API_needed__</span>
         </label>
       </td>
@@ -287,8 +292,10 @@
     <tr>
       <td><span class="opt_title">__MSG_prefs_storage_title__</span></td>
       <td>
+<!--        
         <input type="checkbox" id="enable_local_storage" name="enable_local_storage" class="option-input" />&nbsp;<span>__MSG_prefs_storage_enable_local_storage_info__</span>
         <br/>
+-->
         __MSG_prefs_storage_size__: <span id="cache_storage_size"></span>&nbsp;<button id="btnClearCache" class="btn_small">__MSG_prefs_storage_clear_button__</button>
         <br/>
         <input type="checkbox" id="auto_clear_storage_on_threshold" name="auto_clear_storage_on_threshold" class="option-input" />&nbsp;__MSG_prefs_storage_auto_clear_label__

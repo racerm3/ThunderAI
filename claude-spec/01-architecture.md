@@ -230,10 +230,16 @@ Each subdirectory is a self-contained settings/UI page for a specific feature:
 | `get-task/` | Task creation settings |
 | `menu_order/` | Drag-and-drop reordering and visibility control for popup and context menus |
 | `spamfilter/` | Spam filter settings |
+| `spamlog/` | Spam reports log (read-only) |
 | `summarize/` | Email summarization settings |
+| `summarylog/` | AI summaries log — RSS-style feed rendering date, from, subject and the summary (Markdown/HTML preserved) |
 | `translate/` | Email translation settings |
 | `onboarding/` | First-run welcome page |
 | `_lib/` | Shared libraries used by pages |
+
+## Startup Behavior
+
+A `browser.runtime.onStartup` listener in `mzta-background.js` checks the `summarize_open_log_on_startup` and `spamfilter_open_log_on_startup` preferences and, for each enabled one, opens the corresponding log page (`/pages/summarylog/mzta-summarylog.html` or `/pages/spamlog/mzta-spamlog.html`) via the shared `openTab()` helper, which focuses an already-open tab instead of duplicating it.
 
 ## Storage
 
@@ -243,7 +249,9 @@ All preferences are stored via `browser.storage.local`. The keys and default val
 
 Per-message data (summaries, spam reports, translations) is stored via `js/mzta-storage.js` (`taStorage` class). Each record is keyed by `msg:<headerMessageId>` in `messenger.storage.local` and follows schema version 1. Records contain optional fields: `summary`, `spam`, `translation`, plus metadata (`v`, `ts`). The `taStorage` class provides typed read/write/delete methods per field, automatic record cleanup when all fields are removed, and age-based cleanup.
 
-`js/mzta-summarystore.js` (`taSummaryStore` class) wraps `taStorage` for summary-specific operations: load/save/remove summaries, track in-flight generation state via `browser.storage.session`, enforce a 100-entry cache limit with oldest-first truncation, and store error states.
+`js/mzta-summarystore.js` (`taSummaryStore` class) wraps `taStorage` for summary-specific operations: load/save/remove summaries, track in-flight generation state via `browser.storage.session`, enforce a 100-entry cache limit with oldest-first truncation, and store error states. To keep the Summary Log populated even when a message is deleted later, both `_generateSummaryForMessage()` and `_saveSummaryFromWebchat()` in `mzta-background.js` attach a metadata snapshot (`subject`/`from`/`to`/`message_date`) via `_buildReportMetadata()` — preferring full MIME headers but falling back to MessageHeader fields, which survive deletion — to the stored summary record. `writeSummary()` persists these fields and `getAllSummaryRecords()` returns them plus `summary_html`. Note: summaries cached before this feature was introduced lack the metadata and render blank date/from/subject in the log.
+
+The Summary Log (`pages/summarylog/mzta-summarylog.html`) reads `getAllSummaries()`, sorts newest-first by `summary_date`, and renders each entry as a full-width RSS-style card. The summary body is injected safely via `DOMParser` + node appending (never `innerHTML`); if no HTML is present the body falls back to plain text (Markdown rendered via `markdown-it` when detected). The page refreshes automatically on local storage changes, mirroring the spam log.
 
 `js/mzta-translationstore.js` (`taTranslationStore` class) wraps `taStorage` for translation-specific operations: load/save/remove translations, track in-flight generation state via `browser.storage.session`, enforce a 100-entry cache limit with oldest-first truncation, and store error states. Each translation record stores `translated_text`, `lang`, and optional error information.
 

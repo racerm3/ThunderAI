@@ -6,6 +6,8 @@
 <h2>Version 4.2.0</h2>
       <ul>
         <li>Added a ThunderAI icon button to the main toolbar that opens the ThunderAI configuration page in a new tab.</li>
+        <li>Added a Summary Log page, accessible from the options page, that lists all generated AI summaries as an RSS-style feed showing date, from, subject and the summary (Markdown/HTML formatting retained).</li>
+        <li>Added options to automatically open the Summary Log and the Spam Log pages when Thunderbird starts.</li>
       </ul>
 <h2>Version 4.1.0 - 13/05/2026</h2>
       <ul>

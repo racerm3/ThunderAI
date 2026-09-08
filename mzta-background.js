@@ -77,6 +77,20 @@ browser.runtime.onInstalled.addListener(({ reason, previousVersion }) => {
     }
 });
 
+// Optionally open the summary log / spam log on Thunderbird startup (opt-in).
+browser.runtime.onStartup.addListener(async () => {
+    const startupPrefs = await browser.storage.sync.get({
+        summarize_open_log_on_startup: false,
+        spamfilter_open_log_on_startup: false
+    });
+    if (startupPrefs.summarize_open_log_on_startup) {
+        openTab('/pages/summarylog/mzta-summarylog.html');
+    }
+    if (startupPrefs.spamfilter_open_log_on_startup) {
+        openTab('/pages/spamlog/mzta-spamlog.html');
+    }
+});
+
 await migrateCustomPromptsStorage();
 await migrateDefaultPromptsPropStorage();
 
@@ -346,10 +360,22 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     try {
                         let summaryHtml = msg.text.trim();
                         let cleanedSummary = cleanSummaryText(msg.text);
+                        // Snapshot message metadata so the Summary Log entry stays
+                        // populated even if the message is deleted later.
+                        let message_metadata = {};
+                        try {
+                            const messageResult = await browser.messages.query({ headerMessageId: msg.headerMessageId });
+                            if (messageResult && messageResult.messages.length > 0) {
+                                message_metadata = await _buildReportMetadata(messageResult.messages[0], null);
+                            }
+                        } catch (e) {
+                            taLog.warn("Error building summary metadata for " + msg.headerMessageId + ": " + e);
+                        }
                         const summaryData = {
                             summary: cleanedSummary,
                             summary_html: summaryHtml,
                             summary_date: new Date(),
+                            ...message_metadata,
                             headerMessageId: msg.headerMessageId
                         };
                         await summaryStore.saveSummary(summaryData, msg.headerMessageId);
@@ -723,10 +749,20 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
         const md = window.markdownit();
         let summaryHtml = md.render(aiResponse);
 
+        // Snapshot message metadata so the Summary Log entry stays populated
+        // even if the message is deleted later (same approach as the spam log).
+        let message_metadata = {};
+        try {
+            message_metadata = await _buildReportMetadata(message, fullMessage);
+        } catch (e) {
+            taLog.warn("Error building summary metadata: " + e);
+        }
+
         const summaryData = {
             summary: cleanedSummary,
             summary_html: summaryHtml,
             summary_date: new Date(),
+            ...message_metadata,
             headerMessageId: headerMessageId
         };
         await summaryStore.saveSummary(summaryData, headerMessageId);

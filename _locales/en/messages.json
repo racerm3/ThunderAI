@@ -1401,6 +1401,34 @@
     "message": "Manage summarize settings",
     "description": ""
   },
+  "prefs_OptionText_btnViewSummaryLog": {
+    "message": "View Summary Log",
+    "description": "Button to view the AI summaries log"
+  },
+  "SummaryLog_PageTitle": {
+    "message": "Summary Log",
+    "description": "Title of the summary log page"
+  },
+  "SummaryLog_refresh_btn": {
+    "message": "Refresh",
+    "description": "Button to refresh the summary log"
+  },
+  "SummaryLog_clear_btn": {
+    "message": "Clear Summary Log",
+    "description": "Button to clear the summary log"
+  },
+  "summarylog_no_summaries": {
+    "message": "No summaries have been generated yet. Here you'll find a list of the last 100 summaries.",
+    "description": "Empty state message for the summary log"
+  },
+"prefs_OptionText_summarize_open_log_on_startup": {
+    "message": "Open Summary Log on Thunderbird startup",
+    "description": "Option to auto-open the Summary Log page when Thunderbird starts"
+  },
+  "prefs_OptionText_spamfilter_open_log_on_startup": {
+    "message": "Open Spam Log on Thunderbird startup",
+    "description": "Option to auto-open the Spam Log page when Thunderbird starts"
+  },
   "SpamFilter_PageTitle": {
     "message": "Manage Spam Filter Settings",
     "description": ""

@@ -1,0 +1,202 @@
+#summarylog_container, #summarylog_feed {
+    width: 90%;
+    margin: 20px auto;
+}
+
+#summarylog_container {
+    max-width: 1200px;
+    margin-top: 20px;
+    margin-bottom: 40px;
+}
+
+.page_title {
+    text-align: center;
+    font-size: 1.6em;
+    margin: 20px 0 10px;
+}
+
+.btn_div {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* ── RSS-style feed entries ─────────────────────────────────── */
+.feed-item {
+    width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+.feed-item-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 14px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.feed-item-date {
+    color: #888;
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+.feed-item-from {
+    font-weight: 600;
+    color: #333;
+}
+
+.feed-item-label {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    color: #888;
+    margin-right: 4px;
+}
+
+.feed-item-subject {
+    flex-basis: 100%;
+    font-weight: 600;
+    color: #409EFF;
+}
+
+.feed-item-body {
+    line-height: 1.55;
+    font-size: 0.95em;
+    color: #222;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.feed-item-body p {
+    margin: 0.5em 0;
+}
+
+.feed-item-body ul,
+.feed-item-body ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+}
+
+.feed-item-body li {
+    margin: 0.2em 0;
+}
+
+.feed-item-body h1,
+.feed-item-body h2,
+.feed-item-body h3,
+.feed-item-body h4 {
+    margin: 0.7em 0 0.3em;
+}
+
+.feed-item-body pre,
+.feed-item-body code {
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.feed-item-body pre {
+    padding: 8px;
+    overflow-x: auto;
+}
+
+.feed-item-body code {
+    padding: 1px 4px;
+}
+
+.feed-item-body blockquote {
+    margin: 0.5em 0;
+    padding-left: 1em;
+    border-left: 3px solid #ddd;
+    color: #555;
+}
+
+/* Feed item with an error summary */
+.feed-item.error .feed-item-body {
+    color: #cc0000;
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 40px 0;
+}
+
+/* ── Dark mode ──────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1C1B22;
+        color: rgb(251, 251, 254);
+    }
+
+    a:link {
+        color: #409EFF;
+    }
+
+    a:visited {
+        color: #409EFF;
+    }
+
+    a:hover {
+        color: #66B1FF;
+    }
+
+    a:active {
+        color: #66B1FF;
+    }
+
+    .feed-item {
+        background-color: #2b2a33;
+        border-color: #444;
+    }
+
+    .feed-item-header {
+        border-bottom-color: #444;
+    }
+
+    .feed-item-date,
+    .feed-item-label {
+        color: #aaa;
+    }
+
+    .feed-item-from {
+        color: #eee;
+    }
+
+    .feed-item-subject {
+        color: #66B1FF;
+    }
+
+    .feed-item-body {
+        color: #ddd;
+    }
+
+    .feed-item-body pre,
+    .feed-item-body code {
+        background-color: #333;
+    }
+
+    .feed-item-body blockquote {
+        border-left-color: #555;
+        color: #aaa;
+    }
+
+    .feed-item.error .feed-item-body {
+        color: #ff8080;
+    }
+
+    .empty-state {
+        color: #aaa;
+    }
+}
