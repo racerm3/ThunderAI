@@ -1570,7 +1570,7 @@
     "description": ""
   },
   "Moved_to_Spam": {
-    "message": "Moved to Spam",
+    "message": "Spam",
     "description": ""
   },
   "Explanation": {
@@ -2485,8 +2485,8 @@
     "description": "Confirmation dialog for clearing spam log"
   },
   "SpamLog_filter_label": {
-    "message": "Filter by Moved to Spam status",
-    "description": "Label for the moved to spam filter dropdown"
+    "message": "Filter by Spam status",
+    "description": "Label for the spam status filter dropdown"
   },
   "SpamLog_filter_all": {
     "message": "All",
@@ -2494,11 +2494,11 @@
   },
   "SpamLog_filter_moved_yes": {
     "message": "Yes",
-    "description": "Filter option to show only moved reports"
+    "description": "Filter option to show only spam reports"
   },
   "SpamLog_filter_moved_no": {
     "message": "No",
-    "description": "Filter option to show only not moved reports"
+    "description": "Filter option to show only non-spam reports"
   },
   "Block_Sender": {
     "message": "Block Sender",

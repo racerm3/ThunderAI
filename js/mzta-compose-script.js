@@ -914,6 +914,13 @@ switch (message.command) {
       return Promise.resolve(true);
     }
 
+    case "clearSpamUI": {
+      _removePanel('mzta-spam-check-progress');
+      _removePanel('mzta-spam-report-banner');
+      _removeToolbarItem('mzta-toolbar-spam');
+      return Promise.resolve(true);
+    }
+
     case "showSpamCheckInProgress": {
       _removePanel('mzta-spam-report-banner');
       _removeToolbarItem('mzta-toolbar-spam');

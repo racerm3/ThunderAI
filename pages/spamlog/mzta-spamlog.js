@@ -126,6 +126,14 @@ function updateReportTableSortIndicators() {
     });
 }
 
+// A report is "Spam" (Yes) when its spam score is at/above the threshold that was
+// applied when the report was generated. Spam is deleted automatically, so this
+// replaces the old "Moved to Spam" column, which is no longer meaningful.
+function reportIsSpam(report) {
+    const threshold = (typeof report.SpamThreshold === 'number') ? report.SpamThreshold : 70;
+    return Number(report.spamValue) >= threshold;
+}
+
 function getReportSortValue(report, key) {
     switch (key) {
         case 'message_date':
@@ -138,8 +146,8 @@ function getReportSortValue(report, key) {
 
         case 'spamValue':
             return Number(report.spamValue) || 0;
-        case 'moved':
-            return report.moved ? 1 : 0;
+        case 'spam':
+            return reportIsSpam(report) ? 1 : 0;
         default:
             return '';
     }
@@ -181,11 +189,12 @@ async function loadSpamReport() {
 }
 
 function shouldShowReport(report) {
+    const isSpam = reportIsSpam(report);
     switch (currentFilter) {
         case 'moved':
-            return report.moved === true;
+            return isSpam;
         case 'not_moved':
-            return report.moved !== true;
+            return !isSpam;
         case 'all':
         default:
             return true;
@@ -211,7 +220,7 @@ async function populateTable(data, sortKey = currentSortState.key, sortDirection
 
         // Create a new row
         const row = document.createElement("tr");
-        if (report.moved) {
+        if (reportIsSpam(report)) {
             row.classList.add('spam-report-moved');
         }
 
@@ -237,7 +246,7 @@ async function populateTable(data, sortKey = currentSortState.key, sortDirection
         row.appendChild(tdSpamValue);
 
         const tdMoved = document.createElement("td");
-        tdMoved.textContent = (report.moved ? browser.i18n.getMessage("yes_string") : browser.i18n.getMessage("no_string"));
+        tdMoved.textContent = (reportIsSpam(report) ? browser.i18n.getMessage("yes_string") : browser.i18n.getMessage("no_string"));
         row.appendChild(tdMoved);
 
         const tdExplanation = document.createElement("td");

@@ -168,6 +168,29 @@ taTranslationStore.saveTranslation()
 [later] user opens the message → initTranslation → cache hit → showTranslation instantly
 ```
 
+### Data Flow: Spam Report on Message Display (auto-analysis)
+
+Incoming emails are automatically checked for spam on receive (`onNewMailReceived` → `processEmails({ spamFilter: true })` → `_generateSpamReportForMessage(..., { autoMove: true })`, which permanently deletes any message whose junk score meets the threshold unless the sender is skipped or blocked). To keep that behavior consistent when a message has no cached report, the message-pane `checkSpamReport` handler now auto-analyzes the displayed message too instead of only offering a manual button:
+
+```markdown
+Message displayed in the pane
+       ↓
+content script sends `checkSpamReport`
+       ↓
+mzta-background.js `_checkSpamReport(tabId)`
+   cached report?      → showSpamReport
+   isProcessing?       → showSpamCheckInProgress (prevents duplicate work)
+   spamfilter off / account NOT enabled → showSpamButton (manual trigger)
+   spamfilter on AND account enabled → auto-analyze:
+         _generateSpamReportForMessage(headerMessageId, { autoMove: true, skip_addresses, blocked_domains })
+       ↓
+   above threshold → junk + deletePermanently; otherwise report shown in pane
+```
+
+Account gating mirrors `processEmails`: the message's `folder.accountId` is checked against the configured `spamfilter_enabled_accounts` (empty list = all accounts enabled). `setProcessing()`/`isProcessing()` guard against double-processing a message that the on-receive path is already analyzing.
+
+Before the AI analysis runs, `_generateSpamReportForMessage()` applies the skip/blocked rules (sender in the skip addresses list, sender in the address book, or sender domain in the blocked domains list — the latter permanently deleting the message). When the sender is in the address book (with `spamfilter_skip_addressbook` enabled), no **Spam Log entry is created at all**: the report data and in-flight state are cleared (`removeReportData`) and any "checking…" pane indicator is dismissed (`clearSpamUI`), so address-book senders are skipped from both analysis and logging.
+
 ## Key Modules
 
 | File | Role |
@@ -256,3 +279,5 @@ The Summary Log (`pages/summarylog/mzta-summarylog.html`) reads `getAllSummaries
 `js/mzta-translationstore.js` (`taTranslationStore` class) wraps `taStorage` for translation-specific operations: load/save/remove translations, track in-flight generation state via `browser.storage.session`, enforce a 100-entry cache limit with oldest-first truncation, and store error states. Each translation record stores `translated_text`, `lang`, and optional error information.
 
 `js/mzta-spamreport.js` (`taSpamReport` class) wraps `taStorage` for spam report operations: load/save/remove reports, track in-flight analysis state via `browser.storage.session`, enforce a 100-entry limit, and store error states. To keep the spam log populated even when a message is deleted mid-analysis (race condition with Thunderbird custom filters), `_generateSpamReportForMessage()` in `mzta-background.js` captures a metadata snapshot (subject/from/to/message_date) via `_buildReportMetadata()` — preferring full MIME headers but falling back to MessageHeader fields, which survive deletion — and `saveError()` accepts this snapshot as an optional third argument so error entries are not blank.
+
+The Spam Log and the Spam Filter settings page render the same report table. Since spam is now deleted automatically, the table's "Moved to Spam" column was renamed to **"Spam"**, showing `Yes` when the message's `spamValue` is at/above the report's `SpamThreshold` and `No` otherwise (fallback threshold 70 for legacy records without a stored threshold). The table's `Spam` sort key and the spam-log `Yes`/`No` filter follow the same score-vs-threshold rule via the shared `reportIsSpam()` helper in each page.

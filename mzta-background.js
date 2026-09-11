@@ -638,8 +638,29 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         } else if (await spamReport.isProcessing(message.headerMessageId)) {
                             browser.tabs.sendMessage(tabId, { command: "showSpamCheckInProgress" });
                         } else if (prefs_init.spamfilter) {
-                            // No cached report and not processing — show manual trigger button
-                            browser.tabs.sendMessage(tabId, { command: "showSpamButton", headerMessageId: message.headerMessageId });
+                            // No cached report and not processing — decide between auto-analyzing
+                            // the displayed message (matching the on-receive behavior) and showing
+                            // the manual trigger button (account not enabled for auto-filtering).
+                            let spamDisplayPrefs = await browser.storage.sync.get({
+                                spamfilter_enabled_accounts: prefs_default.spamfilter_enabled_accounts,
+                                spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses,
+                                spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains,
+                            });
+                            let enabledAccounts = spamDisplayPrefs.spamfilter_enabled_accounts || [];
+                            let accountEnabled = enabledAccounts.length === 0 || enabledAccounts.includes(message.folder.accountId);
+                            if (accountEnabled) {
+                                // Auto-analyze the displayed message exactly like on receive, including
+                                // permanently deleting it when the junk score exceeds the threshold.
+                                browser.tabs.sendMessage(tabId, { command: "showSpamCheckInProgress" });
+                                _generateSpamReportForMessage(message.headerMessageId, {
+                                    autoMove: true,
+                                    skip_addresses: spamDisplayPrefs.spamfilter_skip_addresses,
+                                    blocked_domains: spamDisplayPrefs.spamfilter_blocked_sender_domains
+                                });
+                            } else {
+                                // Account not enabled for automatic filtering — offer a manual check.
+                                browser.tabs.sendMessage(tabId, { command: "showSpamButton", headerMessageId: message.headerMessageId });
+                            }
                         }
                     } catch (e) {
                         taLog.error("Error in checkSpamReport: " + e);
@@ -1029,19 +1050,11 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                     });
                     if (isInAddressBook) {
                         taLog.log("Sender " + senderEmail + " is in the address book, skipping spam filter.");
-                        let report_data = {};
-                        report_data.report_date = new Date();
-                        report_data.headerMessageId = headerMessageId;
-                        report_data.spamValue = 0;
-                        report_data.explanation = browser.i18n.getMessage('spamfilter_skip_addressbook_explanation');
-                        report_data.subject = message_metadata.subject;
-                        report_data.from = message_metadata.from;
-                        report_data.to = message_metadata.to;
-                        report_data.message_date = message_metadata.message_date;
-                        report_data.moved = false;
-                        report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
-                        spamReport.saveReportData(report_data, headerMessageId);
-                        await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
+                        // Skip logging entirely: do not create a spam report / Spam Log entry
+                        // for senders present in the address book. Also clear any "checking..."
+                        // indicator and the in-flight processing state for this message.
+                        await spamReport.removeReportData(headerMessageId);
+                        await updateSpamPanel(headerMessageId, "clearSpamUI");
                         taWorkingStatus.stopWorking();
                         return { success: true };
                     }
