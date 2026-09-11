@@ -644,19 +644,52 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             let spamDisplayPrefs = await browser.storage.sync.get({
                                 spamfilter_enabled_accounts: prefs_default.spamfilter_enabled_accounts,
                                 spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses,
+                                spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook,
                                 spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains,
                             });
                             let enabledAccounts = spamDisplayPrefs.spamfilter_enabled_accounts || [];
                             let accountEnabled = enabledAccounts.length === 0 || enabledAccounts.includes(message.folder.accountId);
                             if (accountEnabled) {
+                                // Pre-check the skip rules so an address-book (or skip-listed) sender never
+                                // flashes the "spam check in progress" badge nor triggers a needless analysis.
+                                let senderEmail = (message.author.match(/[\w.-]+@[\w.-]+\.\w+/) || [''])[0].toLowerCase();
+                                let skipDisplayedMessage = false;
+                                if (senderEmail && spamDisplayPrefs.spamfilter_skip_addresses.length > 0 && spamDisplayPrefs.spamfilter_skip_addresses.includes(senderEmail)) {
+                                    skipDisplayedMessage = true;
+                                }
+                                if (!skipDisplayedMessage && senderEmail && spamDisplayPrefs.spamfilter_skip_addressbook) {
+                                    try {
+                                        let hasAddrPerm = await browser.permissions.contains({ permissions: ["addressBooks"] });
+                                        if (hasAddrPerm) {
+                                            let matchingContacts = await browser.contacts.quickSearch({ searchString: senderEmail });
+                                            skipDisplayedMessage = matchingContacts.some(contact => {
+                                                let props = contact.properties;
+                                                return (props.PrimaryEmail && props.PrimaryEmail.toLowerCase() === senderEmail) ||
+                                                    (props.SecondEmail && props.SecondEmail.toLowerCase() === senderEmail);
+                                            });
+                                        }
+                                    } catch (e) {
+                                        taLog.error("Error in spam display skip pre-check: " + e);
+                                    }
+                                }
+                                if (skipDisplayedMessage) {
+                                    taLog.log("Skipping spam analysis for displayed message (sender in skip list/address book).");
+                                    return;
+                                }
                                 // Auto-analyze the displayed message exactly like on receive, including
                                 // permanently deleting it when the junk score exceeds the threshold.
                                 browser.tabs.sendMessage(tabId, { command: "showSpamCheckInProgress" });
-                                _generateSpamReportForMessage(message.headerMessageId, {
+                                const spamResult = await _generateSpamReportForMessage(message.headerMessageId, {
                                     autoMove: true,
                                     skip_addresses: spamDisplayPrefs.spamfilter_skip_addresses,
                                     blocked_domains: spamDisplayPrefs.spamfilter_blocked_sender_domains
                                 });
+                                // When the message is skipped (e.g. the sender is in the address book) no
+                                // spam report is produced, so explicitly clear the "checking..." indicator
+                                // on this tab — updateSpamPanel can miss it if the displayed message changed.
+                                if (spamResult && spamResult.skipped) {
+                                    browser.tabs.sendMessage(tabId, { command: "clearSpamUI" });
+                                }
                             } else {
                                 // Account not enabled for automatic filtering — offer a manual check.
                                 browser.tabs.sendMessage(tabId, { command: "showSpamButton", headerMessageId: message.headerMessageId });
@@ -1056,7 +1089,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                         await spamReport.removeReportData(headerMessageId);
                         await updateSpamPanel(headerMessageId, "clearSpamUI");
                         taWorkingStatus.stopWorking();
-                        return { success: true };
+                        return { success: true, skipped: true };
                     }
                 }
             } catch (err) {
