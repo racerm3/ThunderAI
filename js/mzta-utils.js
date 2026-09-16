@@ -153,7 +153,6 @@ export async function getCurrentIdentity(msgHeader, getFull = false) {
     if (account && account.identities && account.identities.length > 0) {
       // Just return the first identity of the account.
       const identity = account.identities[0];
-      console.log(">>>>>>>>>> got from folder");
       return getFull ? { id: identity.id, email: identity.email } : identity.id;
     }
   }

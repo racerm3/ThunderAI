@@ -1011,8 +1011,12 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         } else {
             const messageResult = await browser.messages.query({ headerMessageId: headerMessageId });
             if (!messageResult || messageResult.messages.length === 0) {
-                let err_data = await spamReport.saveError(headerMessageId, "Message not found");
-                await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
+                // Message not found — this is a race where the email no longer exists
+                // (e.g. deleted by the user or a custom filter) before spam analysis
+                // could look it up. Do not write a "Message not found" error entry to
+                // the spam log; just clean up and return silently.
+                taLog.warn("Message not found for headerMessageId: " + headerMessageId + ", skipping spam analysis");
+                await spamReport.removeReportData(headerMessageId);
                 taWorkingStatus.stopWorking();
                 return { success: false };
             }
