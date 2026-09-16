@@ -92,7 +92,7 @@ These are generated programmatically at the bottom of `mzta-options-default.js` 
 | `calendar_timezone` | `''` | Timezone to enforce |
 | `calendar_no_selection` | `false` | Skip selection prompt |
 | `spamfilter` | `false` | Enable spam filter |
-| `spamfilter_threshold` | `70` | Spam confidence threshold (%) |
+| `spamfilter_threshold` | `70` | Spam confidence threshold (%). A value of `0` is valid and respected (never treated as "unset"). The threshold is read directly from the freshly-loaded `prefs` in `_generateSpamReportForMessage()` (including the receive path); `prefs_init` is only a fallback and a legitimate `0` is preserved via a `typeof === 'number'` check rather than `||`. |
 | `spamfilter_enabled_accounts` | `[]` | Accounts where spam filter is active |
 | `spamfilter_show_msg_panel` | `true` | Show info panel on spam detection |
 | `summarize` | `false` | Enable email summarization |

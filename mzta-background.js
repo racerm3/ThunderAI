@@ -1054,7 +1054,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 report_data.to = message_metadata.to;
                 report_data.message_date = message_metadata.message_date;
                 report_data.moved = false;
-                report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
+                report_data.SpamThreshold = (typeof prefs.spamfilter_threshold === 'number') ? prefs.spamfilter_threshold : (typeof prefs_init.spamfilter_threshold === 'number' ? prefs_init.spamfilter_threshold : 70);
                 spamReport.saveReportData(report_data, headerMessageId);
                 await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
                 taWorkingStatus.stopWorking();
@@ -1130,7 +1130,7 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
                 report_data.to = message_metadata.to;
                 report_data.message_date = message_metadata.message_date;
                 report_data.moved = true;
-                report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
+                report_data.SpamThreshold = (typeof prefs.spamfilter_threshold === 'number') ? prefs.spamfilter_threshold : (typeof prefs_init.spamfilter_threshold === 'number' ? prefs_init.spamfilter_threshold : 70);
                 spamReport.saveReportData(report_data, headerMessageId);
                 await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
                 taWorkingStatus.stopWorking();
@@ -1225,10 +1225,14 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         report_data.to = message_metadata.to;
         report_data.message_date = message_metadata.message_date;
         report_data.moved = false;
-        report_data.SpamThreshold = prefs.spamfilter_threshold || prefs_init.spamfilter_threshold;
+        report_data.SpamThreshold = (typeof prefs.spamfilter_threshold === 'number') ? prefs.spamfilter_threshold : (typeof prefs_init.spamfilter_threshold === 'number' ? prefs_init.spamfilter_threshold : 70);
 
-        // Check if we need to auto-block the sender domain
-        if (options.autoMove && jsonObj.spamValue >= report_data.SpamThreshold && senderDomain) {
+        // Check if we need to auto-block the sender domain.
+        // Clamp the comparison threshold to a minimum of 1 so a spam score of 0
+        // (i.e. the AI determining the message is not spam) is never auto-blocked,
+        // even when the user has configured the threshold to 0.
+        const effectiveBlockThreshold = Math.max(report_data.SpamThreshold, 1);
+        if (options.autoMove && jsonObj.spamValue >= effectiveBlockThreshold && senderDomain) {
             // Add domain to blocked list
             let currentBlockedDomains = await browser.storage.sync.get({ spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains });
             let blockedDomains = currentBlockedDomains.spamfilter_blocked_sender_domains || [];
@@ -2086,6 +2090,7 @@ async function processEmails(args) {
             summarize_auto_uselist: prefs_default.summarize_auto_uselist,
             summarize_auto_uselist_list: prefs_default.summarize_auto_uselist_list,
             spamfilter_enabled_accounts: prefs_default.spamfilter_enabled_accounts,
+            spamfilter_threshold: prefs_default.spamfilter_threshold,
             spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses,
             spamfilter_skip_addressbook: prefs_default.spamfilter_skip_addressbook,
             spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains,
