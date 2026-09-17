@@ -100,9 +100,17 @@ tr.spam-report-moved td {
     font-size: 1.2em;
 }
 
+.sender-actions-cell {
+    white-space: nowrap;
+}
+
 .block-sender-btn {
+    display: inline-block;
+    width: 76px;
     padding: 4px 8px;
     font-size: 0.85em;
+    line-height: 1.3;
+    text-align: center;
     cursor: pointer;
     background-color: #ff4444;
     color: white;
@@ -115,6 +123,30 @@ tr.spam-report-moved td {
 }
 
 .block-sender-btn:disabled {
+    background-color: #888;
+    cursor: default;
+}
+
+.skip-sender-btn {
+    display: inline-block;
+    width: 76px;
+    margin-left: 6px;
+    padding: 4px 8px;
+    font-size: 0.85em;
+    line-height: 1.3;
+    text-align: center;
+    cursor: pointer;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+}
+
+.skip-sender-btn:hover {
+    background-color: #388e3c;
+}
+
+.skip-sender-btn:disabled {
     background-color: #888;
     cursor: default;
 }

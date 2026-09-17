@@ -2512,6 +2512,18 @@
     "message": "Blocked",
     "description": "Label shown after a sender domain has been blocked"
   },
+  "Sender_Actions": {
+    "message": "Sender Actions",
+    "description": "Column header for block/skip sender actions in spam log"
+  },
+  "spamlog_skip_button": {
+    "message": "Skip",
+    "description": "Button text to add a sender email to the spam filter skip list"
+  },
+  "spamlog_skipped_label": {
+    "message": "Skipped",
+    "description": "Label shown after a sender email has been added to the spam filter skip list"
+  },
   "SpamFilter_blocked_domains_title": {
     "message": "Blocked Sender List",
     "description": "Title for the blocked sender domains section"

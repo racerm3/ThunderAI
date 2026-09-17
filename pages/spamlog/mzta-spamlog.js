@@ -206,9 +206,11 @@ async function populateTable(data, sortKey = currentSortState.key, sortDirection
     const tableBody = document.getElementById("report_data_body");
     tableBody.innerHTML = ""; // Clear table before inserting new data
 
-    // Get blocked domains to check against
+    // Get blocked domains and skipped senders to check against
     const blockedPrefs = await browser.storage.sync.get({ spamfilter_blocked_sender_domains: [] });
     const blockedDomains = blockedPrefs.spamfilter_blocked_sender_domains || [];
+    const skipPrefs = await browser.storage.sync.get({ spamfilter_skip_addresses: [] });
+    const skipAddresses = skipPrefs.spamfilter_skip_addresses || [];
 
     const reportRows = sortReportRows(Object.keys(data).map(email => ({ email, report: data[email] })), sortKey, sortDirection);
 
@@ -255,11 +257,14 @@ async function populateTable(data, sortKey = currentSortState.key, sortDirection
 
         // Create Block Sender button cell
         const tdBlock = document.createElement("td");
-        const blockButton = document.createElement("button");
+        tdBlock.className = "sender-actions-cell";
         const sender = Array.isArray(report.from) ? report.from.join(", ") : report.from;
         const domain = extractDomain(sender);
+        const senderEmail = extractEmail(sender);
         const isAlreadyBlocked = domain && blockedDomains.includes(domain);
-        
+        const isAlreadySkipped = senderEmail && skipAddresses.includes(senderEmail);
+
+        const blockButton = document.createElement("button");
         blockButton.textContent = isAlreadyBlocked ? browser.i18n.getMessage("spamlog_blocked_label") : browser.i18n.getMessage("spamlog_block_button");
         blockButton.className = "block-sender-btn";
         blockButton.dataset.sender = sender;
@@ -272,6 +277,21 @@ async function populateTable(data, sortKey = currentSortState.key, sortDirection
             }
         });
         tdBlock.appendChild(blockButton);
+
+        // Create Skip Sender button (adds sender email to the spam filter skip list)
+        const skipButton = document.createElement("button");
+        skipButton.textContent = isAlreadySkipped ? browser.i18n.getMessage("spamlog_skipped_label") : browser.i18n.getMessage("spamlog_skip_button");
+        skipButton.className = "skip-sender-btn";
+        skipButton.dataset.sender = sender;
+        skipButton.disabled = isAlreadySkipped;
+        skipButton.addEventListener("click", async () => {
+            if (senderEmail) {
+                await skipSenderEmail(senderEmail);
+                skipButton.disabled = true;
+                skipButton.textContent = browser.i18n.getMessage("spamlog_skipped_label");
+            }
+        });
+        tdBlock.appendChild(skipButton);
         row.appendChild(tdBlock);
 
         // Append the row to the table
@@ -290,6 +310,13 @@ function extractDomain(sender) {
     return null;
 }
 
+// Helper function to extract the full sender email address (lowercased)
+function extractEmail(sender) {
+    if (!sender) return null;
+    const emailMatch = sender.match(/[\w.-]+@[\w.-]+\.\w+/);
+    return emailMatch ? emailMatch[0].toLowerCase() : null;
+}
+
 // Add domain to blocked sender list
 async function blockSenderDomain(domain) {
     if (!domain) return;
@@ -299,6 +326,19 @@ async function blockSenderDomain(domain) {
         blockedDomains.push(domain);
         blockedDomains = blockedDomains.sort();
         await browser.storage.sync.set({ spamfilter_blocked_sender_domains: blockedDomains });
+    }
+}
+
+// Add sender email address to the spam filter skip list (bypasses spam filtering)
+async function skipSenderEmail(email) {
+    if (!email) return;
+    const prefs = await browser.storage.sync.get({ spamfilter_skip_addresses: [] });
+    let skipAddresses = prefs.spamfilter_skip_addresses || [];
+    const normalized = email.toLowerCase();
+    if (!skipAddresses.includes(normalized)) {
+        skipAddresses.push(normalized);
+        skipAddresses = skipAddresses.sort();
+        await browser.storage.sync.set({ spamfilter_skip_addresses: skipAddresses });
     }
 }
 

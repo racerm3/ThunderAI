@@ -191,6 +191,8 @@ Account gating mirrors `processEmails`: the message's `folder.accountId` is chec
 
 Before the AI analysis runs, `_generateSpamReportForMessage()` applies the skip/blocked rules (sender in the skip addresses list, sender in the address book, or sender domain in the blocked domains list — the latter permanently deleting the message). When the sender is in the address book (with `spamfilter_skip_addressbook` enabled), no **Spam Log entry is created at all**: the report data and in-flight state are cleared (`removeReportData`) and any "checking…" pane indicator is dismissed (`clearSpamUI`), so address-book senders are skipped from both analysis and logging. On the message-display auto-analysis path, `_generateSpamReportForMessage()` returns `{ success: true, skipped: true }` for this skip and `checkSpamReport` then sends `clearSpamUI` directly to the tab that showed the progress badge, guaranteeing the indicator is dismissed even if the displayed-message gate in `updateSpamPanel()` no longer matches. `checkSpamReport` also runs the same skip pre-check (skip-addresses list and address book) before showing the badge, so skipped senders never display the "checking…" indicator in the first place (no flash and no needless analysis on every open).
 
+The Spam Log table provides per-row sender actions: the existing **Block** button adds the sender's domain to `spamfilter_blocked_sender_domains`, and a new green **Skip** button adds the sender's full email address to `spamfilter_skip_addresses` (normalized to lowercase, like the addresses-managed skip list), so that sender bypasses spam filtering. Each button is independent: when clicked it disables itself and shows a confirming label ("Blocked"/"Skipped") without altering the other button's state.
+
 ## Key Modules
 
 | File | Role |
@@ -253,7 +255,7 @@ Each subdirectory is a self-contained settings/UI page for a specific feature:
 | `get-task/` | Task creation settings |
 | `menu_order/` | Drag-and-drop reordering and visibility control for popup and context menus |
 | `spamfilter/` | Spam filter settings |
-| `spamlog/` | Spam reports log (read-only) |
+| `spamlog/` | Spam reports log — read-only list with per-row "Block" (add sender domain to blocked list) and "Skip" (add sender email to the skip list) actions |
 | `summarize/` | Email summarization settings |
 | `summarylog/` | AI summaries log — RSS-style feed rendering date, from, subject and the summary (Markdown/HTML preserved) |
 | `translate/` | Email translation settings |
