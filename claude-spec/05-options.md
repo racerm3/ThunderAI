@@ -100,6 +100,9 @@ These are generated programmatically at the bottom of `mzta-options-default.js` 
 | `summarize_display_mode` | `'inline'` | Where to display summaries: `'inline'` = message pane banner, `'webchat'` = AI chat window. Note: `summarize_auto = 2` and `summarize_auto = 3` always use inline regardless of this setting. |
 | `summarize_max_display_length` | `0` | Maximum characters shown in inline summary before truncation. `0` = no limit (show full text). When set, text is truncated at a word boundary and a "See more"/"See less" toggle link is shown. |
 | `summarize_strip_formatting` | `false` | Strip HTML and Markdown formatting from AI-generated summaries, showing plain text only. |
+| `summarize_max_concurrency` | `10` | Maximum number of summaries to generate in parallel on email receive (`processEmails` drains the batch with this concurrency cap). |
+| `summarize_timeout_sec` | `60` | Per-call LLM timeout (seconds) for auto summaries. A timed-out call is retried up to `summarize_max_retries` times. |
+| `summarize_max_retries` | `3` | Times to retry a timed-out/failed auto summary before recording an error. |
 | `summarize_open_log_on_startup` | `false` | Open the Summary Log page in a new tab when Thunderbird starts. |
 | `spamfilter_open_log_on_startup` | `false` | Open the Spam Log page in a new tab when Thunderbird starts. |
 | `translate` | `true` | Enable email translation |

@@ -156,7 +156,29 @@
         this.worker.postMessage(workerInitMessage);
     }
 
+    /**
+     * Terminate the underlying Web Worker and release its resources.
+     * Safe to call multiple times and when the worker is already gone.
+     */
+    terminateWorker() {
+        try {
+            if (this.worker) {
+                this.worker.terminate();
+            }
+        } catch (e) {
+            this.logger.warn("Error terminating worker: " + e);
+        }
+        this.worker = null;
+    }
+
     sendPrompt(){
+        const cleanup = () => {
+            // Each command instance creates a dedicated worker; terminate it after
+            // completion so we do not accumulate idle threads — especially relevant
+            // when many summarize calls run concurrently.
+            this.terminateWorker();
+        };
+
         return new Promise((resolve, reject) => {
             // Event listeners for worker messages
             this.worker.onmessage = (event) => {
@@ -171,10 +193,12 @@
                     case 'tokensDone':
                         this.logger.log("tokensDone: " + this.full_message);
                         resolve(this.full_message); // Resolve the promise with the full message
+                        cleanup();
                         break;
                     case 'error':
                         console.error('[ThunderAI] Error from API worker:', payload);
                         reject(new Error(`[ThunderAI] Error from API worker: ${payload}`)); // Use a single error object
+                        cleanup();
                         break;
                     default:
                         console.error('[ThunderAI] Unknown event type from API worker:', type);
@@ -189,6 +213,7 @@
                 console.error('Column Number:', error.colno);
                 console.error('Event:', error);
                 reject(error);
+                cleanup();
             };
 
         try {
@@ -197,6 +222,7 @@
         } catch (error) {
             console.error('[ThunderAI] Failed to send message to worker:', error);
             reject(error);
+            cleanup();
         }
         });
     }

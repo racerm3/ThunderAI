@@ -139,13 +139,21 @@ newEmailListener  (checks _process_incoming, which includes summarize_auto === 3
        ↓
 processEmails({ summarizeOnReceive: true })
        ↓  (single loop — shared with addTagsAuto / spamFilter / translateOnReceive)
+   collects summarizeTargets (array), then drains them concurrently:
+runWithConcurrency(summarizeTargets, summarize_max_concurrency, fn)
+       ↓  (default concurrency 10; each call runs in its own Web Worker thread)
 _generateSummaryForMessage(headerMessageId, null, { messageData })
   ← tabId is null → no UI messages sent, silent pre-cache
+  ← each LLM call is bounded by summarize_timeout_sec (Promise.race); on timeout
+     or failure it is retried up to summarize_max_retries times, and the worker
+     is terminated via mzta_specialCommand.terminateWorker() to release its thread
        ↓
 taSummaryStore.saveSummary()
        ↓
 [later] user opens the message → initSummary → cache hit → showSummary instantly
 ```
+
+Because bursts no longer process strictly serially (`for await` + per-message `await`), many arrivals at once are summarized in parallel, and a single hung/stalled call can no longer block the rest of the batch (`Promise.race` timeout + worker termination + bounded retry).
 
 ### Data Flow: Background Translation on Email Receive (translate_auto = 3)
 

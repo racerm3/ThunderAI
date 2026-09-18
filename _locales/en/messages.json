@@ -2136,6 +2136,30 @@
       "message": "Remove HTML and Markdown formatting from the AI-generated summary, showing plain text only.",
       "description": ""
   },
+  "prefs_OptionText_summarize_max_concurrency": {
+      "message": "Max concurrent summaries",
+      "description": "Label for the max concurrent auto-summary setting"
+  },
+  "prefs_OptionText_summarize_max_concurrency_Info": {
+      "message": "Maximum number of emails to summarize in parallel when multiple are received at once. Higher values process bursts faster but may hit the AI provider's rate limits.",
+      "description": "Info text for the max concurrent auto-summary setting"
+  },
+  "prefs_OptionText_summarize_timeout_sec": {
+      "message": "Summary timeout (seconds)",
+      "description": "Label for the per-call summary timeout setting"
+  },
+  "prefs_OptionText_summarize_timeout_sec_Info": {
+      "message": "How many seconds to wait for each AI summary call before considering it timed out. If a call times out it is retried up to the max retries setting.",
+      "description": "Info text for the per-call summary timeout setting"
+  },
+  "prefs_OptionText_summarize_max_retries": {
+      "message": "Summary max retries",
+      "description": "Label for the summary retry setting"
+  },
+  "prefs_OptionText_summarize_max_retries_Info": {
+      "message": "Number of times to retry a summary that timed out or failed before giving up.",
+      "description": "Info text for the summary retry setting"
+  },
   "summarize_see_more": {
       "message": "See more",
       "description": ""

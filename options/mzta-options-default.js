@@ -154,6 +154,9 @@ export const prefs_default = {
     summarize_max_display_length: 0,     // 0 = no limit, otherwise max chars shown inline
     summarize_strip_formatting: false,   // strip HTML/markdown formatting from AI summary
     summarize_open_log_on_startup: false,
+    summarize_max_concurrency: 10,        // max concurrent summary generations on email receive
+    summarize_timeout_sec: 60,            // per-call LLM timeout (seconds) for auto summaries
+    summarize_max_retries: 3,             // times to retry a timed-out/failed auto summary
     translate: true,
     translate_auto: 0,                   // 0: disabled, 1: manual button, 2: automatic on message open, 3: generate on email receive
     translate_max_display_length: 0,     // 0 = no limit, otherwise max chars shown inline

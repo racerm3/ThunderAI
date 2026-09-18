@@ -242,6 +242,9 @@ async function restoreOptions() {
           let default_number_value = 0;
           if(element.id == 'chatgpt_win_height') default_number_value = prefs_default.chatgpt_win_height;
           if(element.id == 'chatgpt_win_width') default_number_value = prefs_default.chatgpt_win_width;
+          if(element.id == 'summarize_max_concurrency') default_number_value = prefs_default.summarize_max_concurrency;
+          if(element.id == 'summarize_timeout_sec') default_number_value = prefs_default.summarize_timeout_sec;
+          if(element.id == 'summarize_max_retries') default_number_value = prefs_default.summarize_max_retries;
           element.value = result[element.id] ?? default_number_value;
           break;
         case 'text':

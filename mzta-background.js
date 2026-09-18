@@ -737,6 +737,10 @@ function cleanSummaryText(text) {
 // tabId is optional — if null, runs silently (background pre-cache, no UI update)
 // options.messageData: { message, fullMessage } — pass pre-fetched data to avoid re-querying
 async function _generateSummaryForMessage(headerMessageId, tabId = null, options = {}) {
+    // Retry support: each invocation may opt into a bounded retry on timeout.
+    let summaryRetry = options.summaryRetry || 0;
+    let retryDelayMs = options.retryDelayMs || 5000;
+
     try {
         let prefs = await browser.storage.sync.get({
             connection_type: prefs_default.connection_type,
@@ -744,6 +748,8 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
             default_chatgpt_lang: prefs_default.default_chatgpt_lang,
             summarize_max_display_length: prefs_default.summarize_max_display_length,
             summarize_strip_formatting: prefs_default.summarize_strip_formatting,
+            summarize_timeout_sec: prefs_default.summarize_timeout_sec,
+            summarize_max_retries: prefs_default.summarize_max_retries,
             ...getDynamicSettingsDefaults(['use_specific_integration', 'connection_type'])
         });
 
@@ -798,7 +804,35 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
         });
 
         await cmd.initWorker();
-        const aiResponse = await cmd.sendPrompt();
+
+        // Bound each LLM call with a timeout so a single hung request can never
+        // stall the whole batch (relevant when many summaries run concurrently).
+        const timeoutMs = (prefs.summarize_timeout_sec || 60) * 1000;
+        let aiResponse;
+        try {
+            aiResponse = await Promise.race([
+                cmd.sendPrompt(),
+                new Promise((resolve, reject) =>
+                    setTimeout(() => {
+                        const err = new Error("Summary timed out");
+                        err.isTimeout = true;
+                        reject(err);
+                    }, timeoutMs)
+                )
+            ]);
+        } catch (err) {
+            // The sendPrompt promise may hang forever if the worker stalls; the
+            // timeout above forces us here. Terminate the stuck worker explicitly.
+            cmd.terminateWorker();
+            throw err;
+        } finally {
+            // If the prompt completed normally, terminate the worker to release
+            // its thread (sendPrompt already does this, but be safe).
+            if (cmd.worker) {
+                cmd.terminateWorker();
+            }
+        }
+
         let cleanedSummary = cleanSummaryText(aiResponse);
         const md = window.markdownit();
         let summaryHtml = md.render(aiResponse);
@@ -825,6 +859,30 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
 
     } catch (error) {
         console.error("[ThunderAI] Error generating summary:", error);
+
+        // Retry on timeout/transient failures up to the configured max. This
+        // guarantees a message is still summarized when the LLM is momentarily
+        // overloaded (the original cause of missed summaries under burst load).
+        const maxRetries = prefs.summarize_max_retries || 0;
+        const retryable = (error && (error.isTimeout || !error.isConfigError));
+        if (retryable && summaryRetry < maxRetries) {
+            taLog.log(`[ThunderAI] Retrying summary for ${headerMessageId} (attempt ${summaryRetry + 1}/${maxRetries})`);
+            try {
+                // Clear the processing flag so the retry invocation can proceed.
+                await summaryStore.removeSummary(headerMessageId);
+            } catch (e) {
+                taLog.warn("Error clearing summary processing state for retry: " + e);
+            }
+            setTimeout(() => {
+                _generateSummaryForMessage(headerMessageId, tabId, {
+                    ...options,
+                    summaryRetry: summaryRetry + 1,
+                    retryDelayMs: retryDelayMs
+                });
+            }, retryDelayMs);
+            return;
+        }
+
         if (!error.isConfigError) await summaryStore.saveError(headerMessageId, error.message || String(error));
         if (tabId) browser.tabs.sendMessage(tabId, { command: "showSummary", data: { error: true, message: error.message || "Failed to generate summary" } });
         taWorkingStatus.stopWorking();
@@ -2062,6 +2120,35 @@ async function updateSpamPanel(messageId, command, data = null) {
     }
 }
 
+/**
+ * Run `workerFn` for each item in `items` with at most `concurrency` tasks
+ * running at the same time. Resolves when all items have been processed.
+ * Exceptions thrown by `workerFn` are caught and logged so one failing item
+ * never blocks the rest of the batch.
+ * @param {Array} items
+ * @param {number} concurrency
+ * @param {(item: any) => Promise<void>} workerFn
+ */
+async function runWithConcurrency(items, concurrency, workerFn) {
+    const results = [];
+    let nextIndex = 0;
+
+    async function worker() {
+        while (nextIndex < items.length) {
+            const index = nextIndex++;
+            try {
+                results[index] = await workerFn(items[index]);
+            } catch (e) {
+                taLog.error("[ThunderAI] Concurrent task error: " + e);
+            }
+        }
+    }
+
+    const workerCount = Math.max(1, Math.min(concurrency, items.length));
+    await Promise.all(Array.from({ length: workerCount }, worker));
+    return results;
+}
+
 async function processEmails(args) {
     const {
         messages,
@@ -2093,6 +2180,7 @@ async function processEmails(args) {
             add_tags_auto_uselist_list: prefs_default.add_tags_auto_uselist_list,
             summarize_auto_uselist: prefs_default.summarize_auto_uselist,
             summarize_auto_uselist_list: prefs_default.summarize_auto_uselist_list,
+            summarize_max_concurrency: prefs_default.summarize_max_concurrency,
             spamfilter_enabled_accounts: prefs_default.spamfilter_enabled_accounts,
             spamfilter_threshold: prefs_default.spamfilter_threshold,
             spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses,
@@ -2105,6 +2193,10 @@ async function processEmails(args) {
         let spamfilter_skip_addresses = prefs_aats.spamfilter_skip_addresses;
         let spamfilter_skip_addressbook = prefs_aats.spamfilter_skip_addressbook;
         let spamfilter_blocked_sender_domains = prefs_aats.spamfilter_blocked_sender_domains;
+
+        // Array of messages that should be summarized; drained concurrently after
+        // the loop so a burst of inbound emails no longer processes strictly serially.
+        let summarizeTargets = [];
 
         for await (let message of messages) {
             let curr_fullMessage = null;
@@ -2227,9 +2319,8 @@ async function processEmails(args) {
                     curr_fullMessage = await browser.messages.getFull(message.id);
                 }
                 taLog.log("[ThunderAI] Pre-caching summary on receive for: " + message.headerMessageId);
-                await _generateSummaryForMessage(message.headerMessageId, null, {
-                    messageData: { message, fullMessage: curr_fullMessage }
-                });
+                // Collect the target now; actually generate concurrently after the loop.
+                summarizeTargets.push({ message, fullMessage: curr_fullMessage });
             }
 
             if (translateOnReceive || translate) {
@@ -2246,6 +2337,20 @@ async function processEmails(args) {
                     messageData: { fullMessage: curr_fullMessage }
                 });
             }
+        }
+
+        // Generate summaries for all collected targets in parallel, bounded by the
+        // configured concurrency. Each call is individually timeout-bounded and
+        // self-retrying, so a burst of emails is drained quickly without a single
+        // stuck LLM call blocking the rest.
+        if (summarizeTargets.length > 0) {
+            const concurrencyLimit = prefs_aats.summarize_max_concurrency || 10;
+            taLog.log(`[ThunderAI] Generating summaries for ${summarizeTargets.length} messages with concurrency ${concurrencyLimit}`);
+            await runWithConcurrency(summarizeTargets, concurrencyLimit, async (target) => {
+                await _generateSummaryForMessage(target.message.headerMessageId, null, {
+                    messageData: { message: target.message, fullMessage: target.fullMessage }
+                });
+            });
         }
     }
 
