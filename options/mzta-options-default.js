@@ -146,6 +146,9 @@ export const prefs_default = {
     spamfilter_include_junk: true,
     spamfilter_blocked_sender_domains: [],
     spamfilter_open_log_on_startup: false,
+    spamfilter_max_concurrency: 10,      // max concurrent spam analyses on email receive
+    spamfilter_timeout_sec: 60,          // per-call LLM timeout (seconds) for spam filtering
+    spamfilter_max_retries: 3,           // times to retry a timed-out/failed spam analysis
     summarize: false,
     summarize_auto: 1,                   // 0: disabled, 1: manual button, 2: automatic on message open, 3: generate on email receive
     summarize_auto_uselist: false,

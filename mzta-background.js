@@ -740,9 +740,11 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
     // Retry support: each invocation may opt into a bounded retry on timeout.
     let summaryRetry = options.summaryRetry || 0;
     let retryDelayMs = options.retryDelayMs || 5000;
+    // Declared outside the try block so the catch block can access the prefs.
+    let prefs = {};
 
     try {
-        let prefs = await browser.storage.sync.get({
+        prefs = await browser.storage.sync.get({
             connection_type: prefs_default.connection_type,
             do_debug: prefs_default.do_debug,
             default_chatgpt_lang: prefs_default.default_chatgpt_lang,
@@ -1029,12 +1031,23 @@ async function _buildReportMetadata(message, curr_fullMessage) {
 // options.prefs: pass pre-fetched prefs to avoid re-querying
 // options.autoMove: if true, move spam messages to junk folder (default: false)
 async function _generateSpamReportForMessage(headerMessageId, options = {}) {
+    // Retry support: each invocation may opt into a bounded retry on timeout.
+    let spamRetry = options.spamRetry || 0;
+    let retryDelayMs = options.retryDelayMs || 5000;
+    // Declared outside the try block so the catch block can access them.
+    let prefs = {};
+    // Snapshot of subject/from/to/message_date captured early so spam log entries
+    // stay populated even if the message is deleted mid-analysis (race condition).
+    let message_metadata = null;
+
     try {
-        let prefs = options.prefs || await browser.storage.sync.get({
+        prefs = options.prefs || await browser.storage.sync.get({
             connection_type: prefs_default.connection_type,
             do_debug: prefs_default.do_debug,
             default_chatgpt_lang: prefs_default.default_chatgpt_lang,
             spamfilter_threshold: prefs_default.spamfilter_threshold,
+            spamfilter_timeout_sec: prefs_default.spamfilter_timeout_sec,
+            spamfilter_max_retries: prefs_default.spamfilter_max_retries,
             ...getDynamicSettingsDefaults(['use_specific_integration', 'connection_type']),
         });
 
@@ -1044,9 +1057,6 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         await updateSpamPanel(headerMessageId, "showSpamCheckInProgress");
 
         let message, curr_fullMessage, msg_text, body_text;
-        // Snapshot of subject/from/to/message_date captured early so spam log entries
-        // stay populated even if the message is deleted mid-analysis (race condition).
-        let message_metadata = null;
 
         if (options.messageData) {
             message = options.messageData.message;
@@ -1243,13 +1253,25 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         let spamfilter_result = '';
         taLog.log("Sending the prompt...");
         try {
-            spamfilter_result = (await cmd_spamfilter.sendPrompt()).trim();
+            // Bound the AI call with a timeout so a single hung request can never
+            // stall the whole batch (relevant when many spam checks run concurrently).
+            const timeoutMs = (prefs.spamfilter_timeout_sec || 60) * 1000;
+            spamfilter_result = (await Promise.race([
+                cmd_spamfilter.sendPrompt(),
+                new Promise((resolve, reject) =>
+                    setTimeout(() => {
+                        const err = new Error("Spam filter timed out");
+                        err.isTimeout = true;
+                        reject(err);
+                    }, timeoutMs)
+                )
+            ])).trim();
         } catch (err) {
-            console.error("[ThunderAI | SpamFilter] Error getting spamfilter: ", err);
-            let err_data = await spamReport.saveError(headerMessageId, err.message || String(err), message_metadata || {});
-            await updateSpamPanel(headerMessageId, "showSpamReport", err_data);
-            taWorkingStatus.stopWorking();
-            return { success: false };
+            // The sendPrompt promise may hang forever if the worker stalls; the
+            // timeout above forces us here. Terminate the stuck worker explicitly
+            // and rethrow so the outer handler can decide on a retry.
+            cmd_spamfilter.terminateWorker();
+            throw err;
         }
         taLog.log("spamfilter_result: " + spamfilter_result);
 
@@ -1336,6 +1358,31 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
 
     } catch (error) {
         console.error("[ThunderAI] Error generating spam report:", error);
+
+        // Retry on timeout/transient failures up to the configured max. This
+        // guarantees a message is still analyzed when the LLM is momentarily
+        // overloaded (e.g. many messages filtered at once).
+        const maxRetries = prefs.spamfilter_max_retries || 0;
+        const retryable = (error && (error.isTimeout || !error.isConfigError));
+        if (retryable && spamRetry < maxRetries) {
+            taLog.log(`[ThunderAI] Retrying spam filter for ${headerMessageId} (attempt ${spamRetry + 1}/${maxRetries})`);
+            try {
+                // Clear the processing flag and any partial report so the retry
+                // invocation can proceed cleanly.
+                await spamReport.removeReportData(headerMessageId);
+            } catch (e) {
+                taLog.warn("Error clearing spam report state for retry: " + e);
+            }
+            setTimeout(() => {
+                _generateSpamReportForMessage(headerMessageId, {
+                    ...options,
+                    spamRetry: spamRetry + 1,
+                    retryDelayMs: retryDelayMs
+                });
+            }, retryDelayMs);
+            return { success: false, retrying: true };
+        }
+
         if (error.isConfigError) {
             await updateSpamPanel(headerMessageId, "showSpamReport", { spamValue: -999, explanation: error.message || String(error) });
         } else {
@@ -2181,6 +2228,9 @@ async function processEmails(args) {
             summarize_auto_uselist: prefs_default.summarize_auto_uselist,
             summarize_auto_uselist_list: prefs_default.summarize_auto_uselist_list,
             summarize_max_concurrency: prefs_default.summarize_max_concurrency,
+            spamfilter_max_concurrency: prefs_default.spamfilter_max_concurrency,
+            spamfilter_timeout_sec: prefs_default.spamfilter_timeout_sec,
+            spamfilter_max_retries: prefs_default.spamfilter_max_retries,
             spamfilter_enabled_accounts: prefs_default.spamfilter_enabled_accounts,
             spamfilter_threshold: prefs_default.spamfilter_threshold,
             spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses,
@@ -2194,8 +2244,10 @@ async function processEmails(args) {
         let spamfilter_skip_addressbook = prefs_aats.spamfilter_skip_addressbook;
         let spamfilter_blocked_sender_domains = prefs_aats.spamfilter_blocked_sender_domains;
 
-        // Array of messages that should be summarized; drained concurrently after
-        // the loop so a burst of inbound emails no longer processes strictly serially.
+        // Arrays of messages to process after the loop: spam analysis first (which may
+        // delete the message), then summaries. Drained concurrently so a burst of
+        // inbound emails no longer processes strictly serially.
+        let spamTargets = [];
         let summarizeTargets = [];
 
         for await (let message of messages) {
@@ -2302,15 +2354,11 @@ async function processEmails(args) {
                     }
                 }
                 if (!skipSpamFilter) {
-                    await _generateSpamReportForMessage(
-                        message.headerMessageId,
-                        {
-                            messageData: { message, fullMessage: curr_fullMessage, body_text, msg_text },
-                            prefs: prefs_aats,
-                            autoMove: true,
-                            skip_addresses: spamfilter_skip_addresses,
-                            blocked_domains: spamfilter_blocked_sender_domains
-                        });
+                    // Collect the target now; actually analyze concurrently after the loop.
+                    spamTargets.push({
+                        headerMessageId: message.headerMessageId,
+                        messageData: { message, fullMessage: curr_fullMessage, body_text, msg_text }
+                    });
                 }
             }
 
@@ -2337,6 +2385,24 @@ async function processEmails(args) {
                     messageData: { fullMessage: curr_fullMessage }
                 });
             }
+        }
+
+        // Analyze spam for all collected targets in parallel, bounded by the configured
+        // concurrency. Each call is individually timeout-bounded and self-retrying.
+        // This runs before the summaries because a spam verdict can permanently delete
+        // the message, making its summary pointless.
+        if (spamTargets.length > 0) {
+            const spamConcurrency = prefs_aats.spamfilter_max_concurrency || 10;
+            taLog.log(`[ThunderAI] Analyzing spam for ${spamTargets.length} messages with concurrency ${spamConcurrency}`);
+            await runWithConcurrency(spamTargets, spamConcurrency, async (target) => {
+                await _generateSpamReportForMessage(target.headerMessageId, {
+                    messageData: target.messageData,
+                    prefs: prefs_aats,
+                    autoMove: true,
+                    skip_addresses: spamfilter_skip_addresses,
+                    blocked_domains: spamfilter_blocked_sender_domains
+                });
+            });
         }
 
         // Generate summaries for all collected targets in parallel, bounded by the

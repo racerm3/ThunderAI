@@ -155,6 +155,8 @@ taSummaryStore.saveSummary()
 
 Because bursts no longer process strictly serially (`for await` + per-message `await`), many arrivals at once are summarized in parallel, and a single hung/stalled call can no longer block the rest of the batch (`Promise.race` timeout + worker termination + bounded retry).
 
+The spam filter on-receive path uses the same treatment: `processEmails` collects `spamTargets` in the loop and drains them first (before summaries, since a spam verdict can permanently delete the message) via `runWithConcurrency(spamTargets, spamfilter_max_concurrency, fn)`. Each `_generateSpamReportForMessage()` call is bounded by `spamfilter_timeout_sec` (`Promise.race`), terminates the stuck worker via `mzta_specialCommand.terminateWorker()` on timeout, and is retried up to `spamfilter_max_retries` times (config errors are never retried) before recording an error in the Spam Log.
+
 ### Data Flow: Background Translation on Email Receive (translate_auto = 3)
 
 When `translate_auto = 3`, a translation is generated silently when a new email arrives. Mirrors the summarize on-receive flow:

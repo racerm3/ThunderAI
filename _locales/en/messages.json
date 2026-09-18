@@ -1489,6 +1489,30 @@
     "message": "If checked, a panel with the spam report will be shown on top of the message.",
     "description": ""
   },
+  "prefs_OptionText_spamfilter_max_concurrency": {
+    "message": "Max concurrent spam checks",
+    "description": "Label for the max concurrent spam filter setting"
+  },
+  "prefs_OptionText_spamfilter_max_concurrency_Info": {
+    "message": "Maximum number of emails to analyze for spam in parallel when multiple are received at once. Higher values process bursts faster but may hit the AI provider's rate limits.",
+    "description": "Info text for the max concurrent spam filter setting"
+  },
+  "prefs_OptionText_spamfilter_timeout_sec": {
+    "message": "Spam filter timeout (seconds)",
+    "description": "Label for the per-call spam filter timeout setting"
+  },
+  "prefs_OptionText_spamfilter_timeout_sec_Info": {
+    "message": "How many seconds to wait for each AI spam analysis before considering it timed out. If a call times out it is retried up to the max retries setting.",
+    "description": "Info text for the per-call spam filter timeout setting"
+  },
+  "prefs_OptionText_spamfilter_max_retries": {
+    "message": "Spam filter max retries",
+    "description": "Label for the spam filter retry setting"
+  },
+  "prefs_OptionText_spamfilter_max_retries_Info": {
+    "message": "Number of times to retry a spam analysis that timed out or failed before giving up.",
+    "description": "Info text for the spam filter retry setting"
+  },
   "spamfilter_threshold_too_low": {
     "message": "The spam threshold is too low! You will likely mark too much mails as spam!",
     "description": ""
