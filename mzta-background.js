@@ -777,8 +777,15 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
         } else {
             const messageResult = await browser.messages.query({ headerMessageId: headerMessageId });
             if (!messageResult || messageResult.messages.length === 0) {
-                await summaryStore.saveError(headerMessageId, "Message not found");
-                if (tabId) browser.tabs.sendMessage(tabId, { command: "showSummary", data: { error: true, message: "Message not found" } });
+                // The message could not be resolved from the given id (it was deleted, or
+                // a message id was passed where a headerMessageId was expected). This is an
+                // internal condition, not a summary failure, so it is only logged and never
+                // persisted: writing a Summary Log entry for it would show a "Message not
+                // found" error card and consume a slot in the 100-entry cache budget,
+                // evicting real summaries. Mirrors the spam filter's behaviour.
+                taLog.warn("[ThunderAI] Cannot generate summary, message not found: " + headerMessageId);
+                // Clear the processing flag so a later attempt is not blocked by it.
+                await summaryStore.removeSummary(headerMessageId);
                 taWorkingStatus.stopWorking();
                 return;
             }
