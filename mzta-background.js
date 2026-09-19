@@ -2196,6 +2196,98 @@ async function runWithConcurrency(items, concurrency, workerFn) {
     return results;
 }
 
+/**
+ * Extract the bare email address from a message author string like
+ * `"John Doe" <john@example.com>`, lowercased. Falls back to the trimmed,
+ * lowercased input when no address is present.
+ * Used for summarize-list matching on the message header alone, so the decision
+ * does not depend on any message body being fetchable.
+ * @param {string} author
+ * @returns {string}
+ */
+function _getAuthorEmail(author) {
+    if (!author) return '';
+    const match = author.match(/<([^>]+)>/);
+    return match ? match[1].trim().toLowerCase() : author.trim().toLowerCase();
+}
+
+/**
+ * Check whether `authorEmail` matches any entry of the auto-summarize sender list.
+ * Entries are one per line or comma separated. An entry matches when it equals the
+ * full address, or when it is a domain (with or without a leading `@`) that the
+ * address belongs to (e.g. `example.com` matches `john@example.com`).
+ * @param {string} authorEmail
+ * @param {string} list
+ * @returns {boolean}
+ */
+function _isSenderInSummarizeList(authorEmail, list) {
+    if (!authorEmail || !list) return false;
+    const senderList = list.split(/[\n,]+/).map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
+    return senderList.some(sender => {
+        const s = sender.replace(/^@/, '');
+        return authorEmail === s || authorEmail.endsWith('@' + s) || authorEmail.endsWith('.' + s);
+    });
+}
+
+/**
+ * Locate a message by its `headerMessageId` when the copy we were notified about
+ * is no longer reachable (e.g. a Thunderbird/server filter moved it to Trash
+ * before we could read it). Searches every folder of the given account, preferring
+ * special-use folders (trash / junk) since those are the usual filter destinations.
+ * @param {string} headerMessageId
+ * @param {string} [accountId] when provided, only folders of this account are searched
+ * @returns {Promise<{message: object, fullMessage: object}|null>}
+ */
+async function _findMessageByHeaderId(headerMessageId, accountId = null) {
+    if (!headerMessageId) return null;
+
+    let folders = [];
+    try {
+        const accounts = await browser.accounts.list();
+        for (const account of accounts) {
+            if (accountId && account.id !== accountId) continue;
+            folders = folders.concat(account.folders || []);
+        }
+    } catch (e) {
+        taLog.warn("[ThunderAI] _findMessageByHeaderId: could not list accounts: " + e);
+        return null;
+    }
+
+    // Prefer the usual filter destinations so the common case costs a single query.
+    const preferredFolders = folders.filter(f => Array.isArray(f.specialUse) && (f.specialUse.includes('trash') || f.specialUse.includes('junk')));
+    const orderedFolders = preferredFolders.concat(folders.filter(f => !preferredFolders.includes(f)));
+
+    for (const folder of orderedFolders) {
+        try {
+            // autoPaginationTimeout: 0 disables the ~1s auto-pagination delay so a
+            // search that finds nothing does not block the batch for a second.
+            const result = await browser.messages.query({
+                folderId: folder.id,
+                headerMessageId: headerMessageId,
+                autoPaginationTimeout: 0
+            });
+            if (result && result.messages.length > 0) {
+                const target = result.messages[0];
+                let fullMessage = null;
+                try {
+                    fullMessage = await browser.messages.getFull(target.id);
+                } catch (e) {
+                    taLog.warn("[ThunderAI] _findMessageByHeaderId: found message " + headerMessageId + " in " + folder.name + " but could not read it: " + e);
+                    continue;
+                }
+                taLog.log("[ThunderAI] Recovered message " + headerMessageId + " from folder: " + folder.name);
+                return { message: target, fullMessage: fullMessage };
+            }
+        } catch (e) {
+            // A folder may be unreadable/virtual; keep looking.
+            continue;
+        }
+    }
+
+    taLog.warn("[ThunderAI] Could not locate message " + headerMessageId + " in any folder.");
+    return null;
+}
+
 async function processEmails(args) {
     const {
         messages,
@@ -2255,12 +2347,38 @@ async function processEmails(args) {
             let msg_text = null;
             let body_text = '';
 
+            // Decide whether this sender is on the auto-summarize list BEFORE doing any
+            // message I/O. This only needs the message header (`author`), which is already
+            // available, and it must not be gated behind a successful body fetch: a filter
+            // may move the message to Trash first, and list-matched senders must still be
+            // summarized in that case (see the recovery below).
+            const authorEmail = _getAuthorEmail(message.author);
+            const isSenderInList = Boolean(prefs_aats.summarize_auto_uselist)
+                && _isSenderInSummarizeList(authorEmail, prefs_aats.summarize_auto_uselist_list);
+            let shouldSummarize = summarizeOnReceive || isSenderInList;
+            let shouldSkipSpamFilterForMessage = Boolean(spamFilter && summarizeAutoUseList && isSenderInList);
+            // Set when the message was moved away from the folder we were notified about
+            // and we managed to recover it from its new location.
+            let recoveredTarget = null;
+
             if (addTagsAuto || spamFilter) {
                 try {
                     curr_fullMessage = await browser.messages.getFull(message.id);
                 } catch (e) {
-                    taLog.warn("Message " + message.id + " was deleted by a filter, skipping: " + e);
-                    continue;
+                    // The message is no longer in the notified folder: a filter moved it
+                    // (usually to Trash) or deleted it before we could read it.
+                    taLog.warn("Message " + message.id + " was deleted or moved by a filter: " + e);
+                    if (shouldSummarize) {
+                        recoveredTarget = await _findMessageByHeaderId(message.headerMessageId, message.folder?.accountId);
+                        if (recoveredTarget) {
+                            curr_fullMessage = recoveredTarget.fullMessage;
+                        }
+                    }
+                    if (!recoveredTarget) {
+                        taLog.warn("Could not recover message " + message.headerMessageId + ", skipping it.");
+                        continue;
+                    }
+                    message = recoveredTarget.message;
                 }
                 msg_text = await getMailBody(curr_fullMessage);
                 taLog.log("Starting from the HTML body if present and converting to plain text...");
@@ -2331,19 +2449,6 @@ async function processEmails(args) {
                 }
             }
 
-            let isSenderInList = false;
-            if (prefs_aats.summarize_auto_uselist && prefs_aats.summarize_auto_uselist_list) {
-                let authorEmail = message.author.match(/<([^>]+)>/);
-                authorEmail = authorEmail ? authorEmail[1].toLowerCase() : message.author.toLowerCase();
-                let senderList = prefs_aats.summarize_auto_uselist_list.split(/[\n,]+/).map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
-                isSenderInList = senderList.some(sender => {
-                    let s = sender.replace(/^@/, '');
-                    return authorEmail === s || authorEmail.endsWith('@' + s) || authorEmail.endsWith('.' + s);
-                });
-            }
-            let shouldSummarize = summarizeOnReceive || isSenderInList;
-            let shouldSkipSpamFilterForMessage = Boolean(spamFilter && summarizeAutoUseList && isSenderInList);
-
             if (spamFilter && !shouldSkipSpamFilterForMessage) {
                 let skipSpamFilter = false;
                 if (isAutoMode && prefs_aats.spamfilter_enabled_accounts.length > 0) {
@@ -2364,16 +2469,50 @@ async function processEmails(args) {
 
             if (shouldSummarize) {
                 if (!curr_fullMessage) {
-                    curr_fullMessage = await browser.messages.getFull(message.id);
+                    // The body was not fetched earlier (summarize-only mode, or the earlier
+                    // fetch was skipped). A filter may have moved the message in the meantime,
+                    // so recover it from its new location instead of dropping the summary.
+                    try {
+                        curr_fullMessage = await browser.messages.getFull(message.id);
+                    } catch (e) {
+                        taLog.warn("Message " + message.id + " is no longer reachable for summary: " + e);
+                        if (!recoveredTarget) {
+                            recoveredTarget = await _findMessageByHeaderId(message.headerMessageId, message.folder?.accountId);
+                        }
+                        if (!recoveredTarget) {
+                            taLog.warn("Could not recover message " + message.headerMessageId + ", skipping summary.");
+                            curr_fullMessage = null;
+                        } else {
+                            message = recoveredTarget.message;
+                            curr_fullMessage = recoveredTarget.fullMessage;
+                        }
+                    }
                 }
-                taLog.log("[ThunderAI] Pre-caching summary on receive for: " + message.headerMessageId);
-                // Collect the target now; actually generate concurrently after the loop.
-                summarizeTargets.push({ message, fullMessage: curr_fullMessage });
+                if (curr_fullMessage) {
+                    taLog.log("[ThunderAI] Pre-caching summary on receive for: " + message.headerMessageId);
+                    // Collect the target now; actually generate concurrently after the loop.
+                    summarizeTargets.push({ message, fullMessage: curr_fullMessage });
+                }
             }
 
             if (translateOnReceive || translate) {
                 if (!curr_fullMessage) {
-                    curr_fullMessage = await browser.messages.getFull(message.id);
+                    try {
+                        curr_fullMessage = await browser.messages.getFull(message.id);
+                    } catch (e) {
+                        taLog.warn("Message " + message.id + " is no longer reachable for translation: " + e);
+                        if (!recoveredTarget) {
+                            recoveredTarget = await _findMessageByHeaderId(message.headerMessageId, message.folder?.accountId);
+                        }
+                        if (recoveredTarget) {
+                            message = recoveredTarget.message;
+                            curr_fullMessage = recoveredTarget.fullMessage;
+                        }
+                    }
+                }
+                if (!curr_fullMessage) {
+                    taLog.warn("Skipping translation for unreachable message " + message.headerMessageId);
+                    continue;
                 }
                 let translateTabId = null;
                 if (translate) {

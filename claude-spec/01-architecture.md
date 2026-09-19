@@ -139,6 +139,9 @@ newEmailListener  (checks _process_incoming, which includes summarize_auto === 3
        ↓
 processEmails({ summarizeOnReceive: true })
        ↓  (single loop — shared with addTagsAuto / spamFilter / translateOnReceive)
+   per message: sender-list check FIRST (header only, no I/O) → isSenderInList
+   then body fetch: on failure + shouldSummarize → _findMessageByHeaderId()
+                    (searches trash/junk first, re-targets the moved message)
    collects summarizeTargets (array), then drains them concurrently:
 runWithConcurrency(summarizeTargets, summarize_max_concurrency, fn)
        ↓  (default concurrency 10; each call runs in its own Web Worker thread)
@@ -156,6 +159,17 @@ taSummaryStore.saveSummary()
 Because bursts no longer process strictly serially (`for await` + per-message `await`), many arrivals at once are summarized in parallel, and a single hung/stalled call can no longer block the rest of the batch (`Promise.race` timeout + worker termination + bounded retry).
 
 The spam filter on-receive path uses the same treatment: `processEmails` collects `spamTargets` in the loop and drains them first (before summaries, since a spam verdict can permanently delete the message) via `runWithConcurrency(spamTargets, spamfilter_max_concurrency, fn)`. Each `_generateSpamReportForMessage()` call is bounded by `spamfilter_timeout_sec` (`Promise.race`), terminates the stuck worker via `mzta_specialCommand.terminateWorker()` on timeout, and is retried up to `spamfilter_max_retries` times (config errors are never retried) before recording an error in the Spam Log.
+
+#### Race against message filters (auto-summarize senders list)
+
+`onNewMailReceived` fires *after* Thunderbird's message filters have run, and filters that run after junk classification may move the message again. A filter that moves a message to Trash therefore races with this listener: by the time the loop calls `browser.messages.getFull(message.id)`, the message may no longer be reachable.
+
+Two things guard against senders on the auto-summarize list being silently skipped in that situation:
+
+1. **The summarize decision is made before any message I/O.** `_getAuthorEmail(message.author)` + `_isSenderInSummarizeList()` only need the message header, which is already in hand, so `isSenderInList` / `shouldSummarize` are computed *before* `getFull()`. Previously the decision was made *after* a successful body fetch, so a thrown `getFull()` (`continue`) skipped the sender-list check entirely — the bug. Matching semantics are unchanged (exact address, `@domain`, or subdomain); the list is only consulted when `summarize_auto_uselist` is on.
+2. **Recovery by `headerMessageId`.** When a body fetch fails and the message should be summarized (or translated), `_findMessageByHeaderId()` searches the account's folders — special-use `trash`/`junk` first, since those are the usual filter destinations — via `browser.messages.query({ folderId, headerMessageId, autoPaginationTimeout: 0 })` and re-targets the message from wherever it now lives. `autoPaginationTimeout: 0` disables the default ~1 s auto-pagination delay so a fruitless search does not stall the batch. If the message is genuinely gone (no recovery), an explicit warning is logged instead of a silent skip.
+
+This applies to both the `addTagsAuto || spamFilter` body-fetch block and the later summarize/translate fetches, and the recovered message object is reused for the remainder of the loop iteration. The separate context-menu / message-open summarize path (`initSummary`) has its own independent copy of the sender-list check and is unaffected.
 
 ### Data Flow: Background Translation on Email Receive (translate_auto = 3)
 
