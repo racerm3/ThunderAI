@@ -790,7 +790,27 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
                 return;
             }
             message = messageResult.messages[0];
-            fullMessage = await browser.messages.getFull(message.id);
+            // The numeric message id returned by query() can go stale between the two
+            // calls (a filter may move or delete the message in between), making getFull()
+            // reject with Thunderbird's own "Message not found: <id>." error. Try to
+            // recover the message from its new location, as on the receive path.
+            try {
+                fullMessage = await browser.messages.getFull(message.id);
+            } catch (e) {
+                taLog.warn("[ThunderAI] getFull failed for summary, trying recovery: " + e);
+                const recovered = await _findMessageByHeaderId(headerMessageId, message.folder?.accountId);
+                if (recovered && recovered.fullMessage) {
+                    message = recovered.message;
+                    fullMessage = recovered.fullMessage;
+                } else {
+                    // The message is genuinely gone: log and return without writing a
+                    // record, so no "Message not found" card pollutes the Summary Log.
+                    taLog.warn("[ThunderAI] Cannot generate summary, message not found: " + headerMessageId);
+                    await summaryStore.removeSummary(headerMessageId);
+                    taWorkingStatus.stopWorking();
+                    return;
+                }
+            }
         }
 
         const connectionType = getConnectionType(prefs, {}, 'summarize');
@@ -892,7 +912,13 @@ async function _generateSummaryForMessage(headerMessageId, tabId = null, options
             return;
         }
 
-        if (!error.isConfigError) await summaryStore.saveError(headerMessageId, error.message || String(error));
+        // Never persist a raw internal API error ("Message not found: <id>.", etc.) as
+        // the user-facing Summary Log text: keep the technical detail in the log and
+        // store the localized generic message instead.
+        if (!error.isConfigError) {
+            taLog.error("[ThunderAI] Summary generation failed: " + (error.message || String(error)));
+            await summaryStore.saveError(headerMessageId, browser.i18n.getMessage('summarize_error'));
+        }
         if (tabId) browser.tabs.sendMessage(tabId, { command: "showSummary", data: { error: true, message: error.message || "Failed to generate summary" } });
         taWorkingStatus.stopWorking();
     }
@@ -938,12 +964,30 @@ async function _generateTranslationForMessage(headerMessageId, tabId = null, opt
         } else {
             const messageResult = await browser.messages.query({ headerMessageId: headerMessageId });
             if (!messageResult || messageResult.messages.length === 0) {
-                await translationStore.saveError(headerMessageId, "Message not found");
-                if (tabId) browser.tabs.sendMessage(tabId, { command: "showTranslation", data: { error: true, message: "Message not found" } });
+                // Internal condition, not a translation failure: log only, never persist,
+                // so no "Message not found" card pollutes the Translation Log.
+                taLog.warn("[ThunderAI] Cannot generate translation, message not found: " + headerMessageId);
+                await translationStore.removeTranslation(headerMessageId);
                 taWorkingStatus.stopWorking();
                 return;
             }
-            fullMessage = await browser.messages.getFull(messageResult.messages[0].id);
+            // The numeric id can go stale between query() and getFull(), making getFull()
+            // reject with Thunderbird's "Message not found: <id>." error. Recover from the
+            // message's new location instead of failing.
+            try {
+                fullMessage = await browser.messages.getFull(messageResult.messages[0].id);
+            } catch (e) {
+                taLog.warn("[ThunderAI] getFull failed for translation, trying recovery: " + e);
+                const recovered = await _findMessageByHeaderId(headerMessageId, messageResult.messages[0].folder?.accountId);
+                if (recovered && recovered.fullMessage) {
+                    fullMessage = recovered.fullMessage;
+                } else {
+                    taLog.warn("[ThunderAI] Cannot generate translation, message not found: " + headerMessageId);
+                    await translationStore.removeTranslation(headerMessageId);
+                    taWorkingStatus.stopWorking();
+                    return;
+                }
+            }
         }
 
         const connectionType = getConnectionType(prefs, {}, 'translate');
@@ -992,7 +1036,11 @@ async function _generateTranslationForMessage(headerMessageId, tabId = null, opt
 
     } catch (error) {
         console.error("[ThunderAI] Error generating translation:", error);
-        if (!error.isConfigError) await translationStore.saveError(headerMessageId, error.message || String(error));
+        // Never persist a raw internal API error as the user-facing Translation Log text.
+        if (!error.isConfigError) {
+            taLog.error("[ThunderAI] Translation generation failed: " + (error.message || String(error)));
+            await translationStore.saveError(headerMessageId, browser.i18n.getMessage('translate_error'));
+        }
         if (tabId) browser.tabs.sendMessage(tabId, { command: "showTranslation", data: { error: true, message: error.message || "Failed to generate translation" } });
         taWorkingStatus.stopWorking();
     }
