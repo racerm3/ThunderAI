@@ -50,6 +50,7 @@ import {
     getConnectionType,
     hasSpecificIntegration,
     openTab,
+    isSenderInAddressList,
 } from './js/mzta-utils.js';
 import { taPromptUtils } from './js/mzta-utils-prompt.js';
 import { mzta_specialCommand } from './js/mzta-special-commands.js';
@@ -654,7 +655,7 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 // flashes the "spam check in progress" badge nor triggers a needless analysis.
                                 let senderEmail = (message.author.match(/[\w.-]+@[\w.-]+\.\w+/) || [''])[0].toLowerCase();
                                 let skipDisplayedMessage = false;
-                                if (senderEmail && spamDisplayPrefs.spamfilter_skip_addresses.length > 0 && spamDisplayPrefs.spamfilter_skip_addresses.includes(senderEmail)) {
+                                if (senderEmail && spamDisplayPrefs.spamfilter_skip_addresses.length > 0 && isSenderInAddressList(senderEmail, spamDisplayPrefs.spamfilter_skip_addresses)) {
                                     skipDisplayedMessage = true;
                                 }
                                 if (!skipDisplayedMessage && senderEmail && spamDisplayPrefs.spamfilter_skip_addressbook) {
@@ -1166,10 +1167,12 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         // Extract sender email for skip checks
         let senderEmail = (message.author.match(/[\w.-]+@[\w.-]+\.\w+/) || [''])[0].toLowerCase();
 
-        // Check if sender is in the skip addresses list
+        // Check if sender is in the skip addresses list.
+        // Entries may be full addresses or domains: a domain-only entry (e.g.
+        // "mail.txu.com") skips every sender at that domain ("txu@mail.txu.com").
         let skip_addresses = options.skip_addresses || (await browser.storage.sync.get({ spamfilter_skip_addresses: prefs_default.spamfilter_skip_addresses })).spamfilter_skip_addresses;
         if (skip_addresses.length > 0) {
-            if (senderEmail && skip_addresses.includes(senderEmail)) {
+            if (senderEmail && isSenderInAddressList(senderEmail, skip_addresses)) {
                 taLog.log("Sender " + senderEmail + " is in the skip addresses list, skipping spam filter.");
                 let report_data = {};
                 report_data.report_date = new Date();
@@ -2268,20 +2271,15 @@ function _getAuthorEmail(author) {
 
 /**
  * Check whether `authorEmail` matches any entry of the auto-summarize sender list.
- * Entries are one per line or comma separated. An entry matches when it equals the
- * full address, or when it is a domain (with or without a leading `@`) that the
- * address belongs to (e.g. `example.com` matches `john@example.com`).
+ * Delegates to the shared matcher so summarize and spam-filter lists behave
+ * identically: entries match by full address or by domain (`example.com` matches
+ * `john@example.com` and `x@sub.example.com`; a leading `@` is optional).
  * @param {string} authorEmail
  * @param {string} list
  * @returns {boolean}
  */
 function _isSenderInSummarizeList(authorEmail, list) {
-    if (!authorEmail || !list) return false;
-    const senderList = list.split(/[\n,]+/).map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
-    return senderList.some(sender => {
-        const s = sender.replace(/^@/, '');
-        return authorEmail === s || authorEmail.endsWith('@' + s) || authorEmail.endsWith('.' + s);
-    });
+    return isSenderInAddressList(authorEmail, list);
 }
 
 /**

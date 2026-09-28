@@ -18,6 +18,7 @@
 
 import { taLogger } from '../../js/mzta-logger.js';
 import { taSpamReport } from '../../js/mzta-spamreport.js';
+import { isSenderInAddressList } from '../../js/mzta-utils.js';
 
 let taLog = null;
 let spamReport = null;
@@ -262,7 +263,7 @@ async function populateTable(data, sortKey = currentSortState.key, sortDirection
         const domain = extractDomain(sender);
         const senderEmail = extractEmail(sender);
         const isAlreadyBlocked = domain && blockedDomains.includes(domain);
-        const isAlreadySkipped = senderEmail && skipAddresses.includes(senderEmail);
+        const isAlreadySkipped = senderEmail && isSenderInAddressList(senderEmail, skipAddresses);
 
         const blockButton = document.createElement("button");
         blockButton.textContent = isAlreadyBlocked ? browser.i18n.getMessage("spamlog_blocked_label") : browser.i18n.getMessage("spamlog_block_button");

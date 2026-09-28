@@ -591,6 +591,45 @@ export function prepareOriginURL(url) {
   return url.endsWith('/') ? `${url}*` : `${url}/*`;
 }
 
+/**
+ * Check whether a sender email address matches an entry of an address/domain list.
+ *
+ * An entry matches when it equals the full address, or when the address belongs to
+ * the entry's domain — so a domain-only entry skips/blocks every sender at that
+ * domain *and all of its subdomains*. A leading "@", "." or "*." on a domain entry
+ * is optional and ignored.
+ *
+ * Examples (entry -> matching addresses):
+ *   "john@example.com" -> john@example.com
+ *   "example.com"      -> john@example.com, jane@example.com, x@mail.example.com
+ *   "mail.example.com" -> x@mail.example.com, y@sub.mail.example.com
+ *   "example.co.uk"    -> x@mail.example.co.uk  (multi-label roots work too)
+ *   "@example.com" / ".example.com" / "*.example.com" -> same as "example.com"
+ *
+ * The domain comparison is anchored on a preceding "@" or "." so a suffix cannot
+ * be spoofed: "example.com" does NOT match "x@notexample.com" nor
+ * "x@example.com.evil.com", and "mail.example.com" does NOT match
+ * "x@other.example.com".
+ *
+ * @param {string} senderEmail - The sender's email address.
+ * @param {Array<string>|string} list - Array of entries, or a string with one entry
+ *   per line and/or comma separated.
+ * @returns {boolean} True if the sender matches any entry.
+ */
+export function isSenderInAddressList(senderEmail, list) {
+  if (!senderEmail || !list) return false;
+  const entries = Array.isArray(list) ? list : String(list).split(/[\n,]+/);
+  const email = String(senderEmail).trim().toLowerCase();
+  if (email.length === 0) return false;
+  return entries.some(entry => {
+    const e = String(entry).trim().toLowerCase()
+      .replace(/^\*\./, '')     // "*.example.com" -> "example.com"
+      .replace(/^[@.]/, '');    // "@example.com" / ".example.com" -> "example.com"
+    if (e.length === 0) return false;
+    return email === e || email.endsWith('@' + e) || email.endsWith('.' + e);
+  });
+}
+
 function generateHexColorForTag() {
   const red = Math.floor(Math.random() * 256);
   const green = Math.floor(Math.random() * 256);
