@@ -630,6 +630,64 @@ export function isSenderInAddressList(senderEmail, list) {
   });
 }
 
+/**
+ * Extract every email address belonging to a Thunderbird address-book contact.
+ *
+ * Why the vCard matters: the legacy `PrimaryEmail` / `SecondEmail` properties only
+ * expose the first entries of the underlying vCard —
+ * "A vCard can store multiple values for each type and legacy properties point to
+ * the first entry of the associated type." (Thunderbird "Working with vCard
+ * contacts" guide). A contact whose matching address is the 3rd (or later) EMAIL
+ * entry is therefore invisible through legacy properties, which is why all EMAIL
+ * entries of the vCard are parsed as well.
+ *
+ * The vCard string is exposed as `vCard` on ContactNode (Manifest V3 / TB 128+) and
+ * as part of ContactProperties ("A set of individual properties for a particular
+ * contact, and its vCard string") on Manifest V2.
+ *
+ * @param {object} contact - A ContactNode as returned by contacts.list()/quickSearch().
+ * @returns {string[]} Lowercased, de-duplicated email addresses found on the contact.
+ */
+export function extractContactEmails(contact) {
+  if (!contact || typeof contact !== 'object') return [];
+  const found = new Set();
+  const add = (value) => {
+    if (typeof value !== 'string') return;
+    const trimmed = value.trim();
+    if (trimmed.length === 0 || !trimmed.includes('@')) return;
+    found.add(trimmed.toLowerCase());
+  };
+
+  const props = (contact.properties && typeof contact.properties === 'object')
+    ? contact.properties
+    : {};
+
+  // 1. Individual contact properties whose name refers to an email address
+  //    (PrimaryEmail, SecondEmail, and any further email-ish properties).
+  for (const [key, value] of Object.entries(props)) {
+    if (/email/i.test(key)) add(value);
+  }
+
+  // 2. Every EMAIL entry of the vCard — the authoritative source for contacts that
+  //    hold more than two addresses.
+  const vCard = typeof contact.vCard === 'string'
+    ? contact.vCard
+    : (typeof props.vCard === 'string' ? props.vCard : '');
+  if (vCard) {
+    for (const line of vCard.split(/\r?\n/)) {
+      // Property name is everything before the first ';' or ':'. Matches "EMAIL:..",
+      // "EMAIL;TYPE=work:.." and Apple-style "item1.EMAIL:..". Non-email properties
+      // such as NOTE are deliberately ignored so a note mentioning an address does
+      // not make that address look like a contact.
+      const match = line.match(/^([^:;]*)[^:]*:(.*)$/);
+      if (!match || !/EMAIL$/i.test(match[1].trim())) continue;
+      add(match[2].trim().replace(/^mailto:/i, ''));
+    }
+  }
+
+  return Array.from(found);
+}
+
 function generateHexColorForTag() {
   const red = Math.floor(Math.random() * 256);
   const green = Math.floor(Math.random() * 256);

@@ -51,6 +51,7 @@ import {
     hasSpecificIntegration,
     openTab,
     isSenderInAddressList,
+    extractContactEmails,
 } from './js/mzta-utils.js';
 import { taPromptUtils } from './js/mzta-utils-prompt.js';
 import { mzta_specialCommand } from './js/mzta-special-commands.js';
@@ -662,12 +663,7 @@ messenger.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                     try {
                                         let hasAddrPerm = await browser.permissions.contains({ permissions: ["addressBooks"] });
                                         if (hasAddrPerm) {
-                                            let matchingContacts = await browser.contacts.quickSearch({ searchString: senderEmail });
-                                            skipDisplayedMessage = matchingContacts.some(contact => {
-                                                let props = contact.properties;
-                                                return (props.PrimaryEmail && props.PrimaryEmail.toLowerCase() === senderEmail) ||
-                                                    (props.SecondEmail && props.SecondEmail.toLowerCase() === senderEmail);
-                                            });
+                                            skipDisplayedMessage = await _isSenderInAddressBook(senderEmail);
                                         }
                                     } catch (e) {
                                         taLog.error("Error in spam display skip pre-check: " + e);
@@ -1203,24 +1199,15 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
 
         if (skip_addressbook && senderEmail) {
             try {
-                let hasPermission = await browser.permissions.contains({ permissions: ["addressBooks"] });
-                if (hasPermission) {
-                    let matchingContacts = await browser.contacts.quickSearch({ searchString: senderEmail });
-                    let isInAddressBook = matchingContacts.some(contact => {
-                        let props = contact.properties;
-                        return (props.PrimaryEmail && props.PrimaryEmail.toLowerCase() === senderEmail) ||
-                            (props.SecondEmail && props.SecondEmail.toLowerCase() === senderEmail);
-                    });
-                    if (isInAddressBook) {
-                        taLog.log("Sender " + senderEmail + " is in the address book, skipping spam filter.");
-                        // Skip logging entirely: do not create a spam report / Spam Log entry
-                        // for senders present in the address book. Also clear any "checking..."
-                        // indicator and the in-flight processing state for this message.
-                        await spamReport.removeReportData(headerMessageId);
-                        await updateSpamPanel(headerMessageId, "clearSpamUI");
-                        taWorkingStatus.stopWorking();
-                        return { success: true, skipped: true };
-                    }
+                if (await _isSenderInAddressBook(senderEmail)) {
+                    taLog.log("Sender " + senderEmail + " is in the address book, skipping spam filter.");
+                    // Skip logging entirely: do not create a spam report / Spam Log entry
+                    // for senders present in the address book. Also clear any "checking..."
+                    // indicator and the in-flight processing state for this message.
+                    await spamReport.removeReportData(headerMessageId);
+                    await updateSpamPanel(headerMessageId, "clearSpamUI");
+                    taWorkingStatus.stopWorking();
+                    return { success: true, skipped: true };
                 }
             } catch (err) {
                 taLog.error("Error checking address book for sender: " + err);
@@ -2341,6 +2328,115 @@ async function _findMessageByHeaderId(headerMessageId, accountId = null) {
     return null;
 }
 
+/**
+ * Cached set of every email address found in the user's address books.
+ *
+ * Built from the contacts' vCards rather than from the legacy `PrimaryEmail` /
+ * `SecondEmail` properties, because those only expose the first entries of the
+ * vCard ("A vCard can store multiple values for each type and legacy properties
+ * point to the first entry of the associated type."). Contacts holding three or
+ * more addresses would otherwise never match on their 3rd+ address.
+ *
+ * @type {Set<string>|null}
+ */
+let _addressBookEmails = null;
+let _addressBookEmailsBuiltAt = 0;
+let _addressBookEmailsPromise = null;
+const _ADDRESSBOOK_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function _invalidateAddressBookCache(reason) {
+    if (_addressBookEmails === null && _addressBookEmailsPromise === null) return;
+    _addressBookEmails = null;
+    _addressBookEmailsPromise = null;
+    taLog.log("[ThunderAI] Address book email cache invalidated (" + reason + ")");
+}
+
+/**
+ * Return the (cached) set of all address-book email addresses, or null when the
+ * address books could not be read.
+ * @returns {Promise<Set<string>|null>}
+ */
+async function _getAddressBookEmails() {
+    const isFresh = _addressBookEmails && (Date.now() - _addressBookEmailsBuiltAt) < _ADDRESSBOOK_CACHE_TTL_MS;
+    if (isFresh) return _addressBookEmails;
+    if (_addressBookEmailsPromise) return _addressBookEmailsPromise;
+
+    _addressBookEmailsPromise = (async () => {
+        const emails = new Set();
+        try {
+            const books = await browser.addressBooks.list();
+            for (const book of books) {
+                let contacts = [];
+                try {
+                    contacts = await browser.contacts.list(book.id);
+                } catch (e) {
+                    // A remote/read-only address book may be temporarily unavailable.
+                    taLog.warn("[ThunderAI] Could not list contacts of address book '" + book.name + "': " + e);
+                    continue;
+                }
+                for (const contact of contacts || []) {
+                    for (const email of extractContactEmails(contact)) emails.add(email);
+                }
+            }
+            _addressBookEmails = emails;
+            _addressBookEmailsBuiltAt = Date.now();
+            taLog.log("[ThunderAI] Address book email cache built: " + emails.size + " address(es)");
+            return emails;
+        } catch (e) {
+            taLog.error("[ThunderAI] Error building the address book email cache: " + e);
+            return null;
+        } finally {
+            _addressBookEmailsPromise = null;
+        }
+    })();
+
+    return _addressBookEmailsPromise;
+}
+
+/**
+ * Check whether a sender address belongs to any address-book contact.
+ *
+ * Uses `contacts.quickSearch` as a fast path, but verifies the match against every
+ * email of the returned contact (vCard-aware) and falls back to the full address
+ * book index. The fallback is required because the quick search only covers the
+ * fields listed in the `mail.addr_book.quicksearchquery.format` preference, which
+ * does not necessarily include every EMAIL entry of a contact.
+ *
+ * @param {string} senderEmail - Lowercased sender address.
+ * @returns {Promise<boolean>}
+ */
+async function _isSenderInAddressBook(senderEmail) {
+    if (!senderEmail) return false;
+    const email = senderEmail.toLowerCase();
+
+    // Fast path: the address book search already found matching contact(s).
+    try {
+        const matchingContacts = await browser.contacts.quickSearch({ searchString: email });
+        for (const contact of matchingContacts || []) {
+            if (extractContactEmails(contact).includes(email)) return true;
+            // The search may return a node without the vCard string; fetch the full
+            // contact before dismissing it.
+            const hasVCard = typeof contact?.vCard === 'string'
+                || typeof contact?.properties?.vCard === 'string';
+            if (!hasVCard && contact?.id) {
+                try {
+                    const fullContact = await browser.contacts.get(contact.id);
+                    if (fullContact && extractContactEmails(fullContact).includes(email)) return true;
+                } catch (e) {
+                    taLog.warn("[ThunderAI] Could not read contact " + contact.id + ": " + e);
+                }
+            }
+        }
+    } catch (e) {
+        taLog.warn("[ThunderAI] Address book quickSearch failed, falling back to the full lookup: " + e);
+    }
+
+    // Authoritative path: consult the address book index built from the vCards.
+    const allEmails = await _getAddressBookEmails();
+    if (allEmails) return allEmails.has(email);
+    return false;
+}
+
 async function processEmails(args) {
     const {
         messages,
@@ -2652,6 +2748,26 @@ async function processEmails(args) {
 
 let listenAllFolders = !prefs_init.add_tags_auto_only_inbox || prefs_init.summarize_auto_uselist;
 browser.messages.onNewMailReceived.addListener(newEmailListener, listenAllFolders);
+
+// Keep the address-book email cache in sync: drop it whenever contacts or address
+// books change, so a sender removed from the address book is re-checked promptly and
+// a newly added one is honoured immediately (rather than after the TTL expires).
+// The addressBooks permission is optional, so only register when it was granted.
+try {
+    const hasAddressBooksPermission = await browser.permissions.contains({ permissions: ["addressBooks"] });
+    if (hasAddressBooksPermission) {
+        browser.addressBooks.onCreated.addListener(() => _invalidateAddressBookCache("address book created"));
+        browser.addressBooks.onDeleted.addListener(() => _invalidateAddressBookCache("address book deleted"));
+        browser.addressBooks.onUpdated.addListener(() => _invalidateAddressBookCache("address book updated"));
+        browser.contacts.onCreated.addListener(() => _invalidateAddressBookCache("contact created"));
+        browser.contacts.onDeleted.addListener(() => _invalidateAddressBookCache("contact deleted"));
+        browser.contacts.onUpdated.addListener(() => _invalidateAddressBookCache("contact updated"));
+        // onManyCreated exists from TB 149; guard so older supported versions keep working.
+        browser.contacts.onManyCreated?.addListener(() => _invalidateAddressBookCache("many contacts created"));
+    }
+} catch (e) {
+    taLog.warn("[ThunderAI] Could not register address book cache listeners: " + e);
+}
 
 // Clean up orphaned summary cache records on startup (delayed 60 seconds to let Thunderbird settle)
 setTimeout(async () => {
