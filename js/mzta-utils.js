@@ -631,6 +631,37 @@ export function isSenderInAddressList(senderEmail, list) {
 }
 
 /**
+ * Check whether a sender domain matches an entry of a domains list.
+ *
+ * A root-domain entry covers that domain *and all of its subdomains*, so
+ * "beehiiv.com" matches "beehiiv.com", "mail.beehiiv.com" and "a.b.beehiiv.com".
+ * This makes the block list behave like the skip list, where an entry also covers
+ * the subdomains beneath it. A leading "*." or "." on an entry is optional.
+ *
+ * The comparison is anchored on a preceding ".": "beehiiv.com" does NOT match
+ * "notbeehiiv.com", and never matches "beehiiv.com.evil.com". Exact host entries
+ * keep working unchanged ("mail.beehiiv.com" still matches only that host).
+ *
+ * @param {string} senderDomain - The sender's domain (the part after the last "@").
+ * @param {Array<string>|string} list - Array of entries, or a string with one entry
+ *   per line and/or comma separated.
+ * @returns {boolean} True if the sender domain matches any entry.
+ */
+export function isDomainInList(senderDomain, list) {
+  if (!senderDomain || !list) return false;
+  const entries = Array.isArray(list) ? list : String(list).split(/[\n,]+/);
+  const domain = String(senderDomain).trim().toLowerCase().replace(/^[@.]/, '');
+  if (domain.length === 0) return false;
+  return entries.some(entry => {
+    const e = String(entry).trim().toLowerCase()
+      .replace(/^\*\./, '')     // "*.example.com" -> "example.com"
+      .replace(/^[@.]/, '');    // "@example.com" / ".example.com" -> "example.com"
+    if (e.length === 0) return false;
+    return domain === e || domain.endsWith('.' + e);
+  });
+}
+
+/**
  * Extract every email address belonging to a Thunderbird address-book contact.
  *
  * Why the vCard matters: the legacy `PrimaryEmail` / `SecondEmail` properties only

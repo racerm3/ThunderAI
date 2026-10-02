@@ -2581,7 +2581,7 @@
     "description": "Info text for blocked sender domains"
   },
   "SpamFilter_blocked_domains_infoline2": {
-    "message": "Add one domain per line, or separated by a comma.",
+    "message": "Add one domain per line, or separated by a comma. A domain entry also covers its subdomains, so beehiiv.com blocks theaireport@mail.beehiiv.com.",
     "description": "Info text for format of blocked domains list"
   },
   "spamfilter_blocked_domain_explanation": {

@@ -51,6 +51,7 @@ import {
     hasSpecificIntegration,
     openTab,
     isSenderInAddressList,
+    isDomainInList,
     extractContactEmails,
 } from './js/mzta-utils.js';
 import { taPromptUtils } from './js/mzta-utils-prompt.js';
@@ -1227,7 +1228,9 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
 
         if (senderDomain) {
             let blockedDomains = await (options.blocked_domains || browser.storage.sync.get({ spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains })).spamfilter_blocked_sender_domains;
-            if (blockedDomains && blockedDomains.includes(senderDomain)) {
+            // A root-domain entry also covers its subdomains ("beehiiv.com" blocks
+            // "theaireport@mail.beehiiv.com"), matching the skip list's behaviour.
+            if (blockedDomains && isDomainInList(senderDomain, blockedDomains)) {
                 taLog.log("Sender domain " + senderDomain + " is in the blocked domains list, skipping spam filter and deleting message.");
 
                 // Delete the message permanently (may already be deleted by a custom filter)
