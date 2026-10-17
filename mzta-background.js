@@ -1171,21 +1171,14 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         if (skip_addresses.length > 0) {
             if (senderEmail && isSenderInAddressList(senderEmail, skip_addresses)) {
                 taLog.log("Sender " + senderEmail + " is in the skip addresses list, skipping spam filter.");
-                let report_data = {};
-                report_data.report_date = new Date();
-                report_data.headerMessageId = headerMessageId;
-                report_data.spamValue = 0;
-                report_data.explanation = browser.i18n.getMessage('spamfilter_skip_addresses_explanation');
-                report_data.subject = message_metadata.subject;
-                report_data.from = message_metadata.from;
-                report_data.to = message_metadata.to;
-                report_data.message_date = message_metadata.message_date;
-                report_data.moved = false;
-                report_data.SpamThreshold = (typeof prefs.spamfilter_threshold === 'number') ? prefs.spamfilter_threshold : (typeof prefs_init.spamfilter_threshold === 'number' ? prefs_init.spamfilter_threshold : 70);
-                spamReport.saveReportData(report_data, headerMessageId);
-                await updateSpamPanel(headerMessageId, "showSpamReport", report_data);
+                // Skip logging entirely: do not create a spam report / Spam Log entry
+                // for senders on the skip list (mirrors the address-book skip below).
+                // Also clear any "checking..." indicator and the in-flight processing
+                // state for this message.
+                await spamReport.removeReportData(headerMessageId);
+                await updateSpamPanel(headerMessageId, "clearSpamUI");
                 taWorkingStatus.stopWorking();
-                return { success: true };
+                return { success: true, skipped: true };
             }
         }
 
