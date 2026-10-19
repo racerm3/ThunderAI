@@ -18,7 +18,7 @@
 
 import { taLogger } from '../../js/mzta-logger.js';
 import { taSpamReport } from '../../js/mzta-spamreport.js';
-import { isSenderInAddressList, isDomainInList } from '../../js/mzta-utils.js';
+import { isSenderInAddressList, isDomainInList, openTab } from '../../js/mzta-utils.js';
 
 let taLog = null;
 let spamReport = null;
@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnRefreshSpamLog').addEventListener('click', loadSpamReport);
     document.getElementById('btnClearSpamLog').addEventListener('click', clearSpamLog);
+    document.getElementById('btnSpamLogSettings').addEventListener('click', () => {
+        openTab('/pages/spamfilter/mzta-spamfilter.html');
+    });
 });
 
 function initializeStorageListener() {

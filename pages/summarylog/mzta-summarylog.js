@@ -18,6 +18,7 @@
 
 import { taLogger } from '../../js/mzta-logger.js';
 import { taSummaryStore } from '../../js/mzta-summarystore.js';
+import { openTab } from '../../js/mzta-utils.js';
 
 let taLog = null;
 let summaryStore = null;
@@ -34,6 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnRefreshSummaryLog').addEventListener('click', loadSummaryLog);
     document.getElementById('btnClearSummaryLog').addEventListener('click', clearSummaryLog);
+    document.getElementById('btnSummaryLogSettings').addEventListener('click', () => {
+        openTab('/pages/summarize/mzta-summarize.html');
+    });
 });
 
 function initializeStorageListener() {

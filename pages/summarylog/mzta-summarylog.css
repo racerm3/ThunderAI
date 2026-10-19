@@ -23,6 +23,10 @@
     margin-bottom: 20px;
 }
 
+.btn_settings {
+    margin-right: auto;
+}
+
 /* ── RSS-style feed entries ─────────────────────────────────── */
 .feed-item {
     width: 100%;

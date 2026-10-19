@@ -1417,6 +1417,10 @@
     "message": "Clear Summary Log",
     "description": "Button to clear the summary log"
   },
+  "SummaryLog_settings_btn": {
+    "message": "Settings",
+    "description": "Button to open the Summarize settings page"
+  },
   "summarylog_no_summaries": {
     "message": "No summaries have been generated yet. Here you'll find a list of the last 100 summaries.",
     "description": "Empty state message for the summary log"
@@ -2531,6 +2535,10 @@
   "SpamLog_clear_confirm": {
     "message": "Are you sure you want to clear all spam reports? This action cannot be undone.",
     "description": "Confirmation dialog for clearing spam log"
+  },
+  "SpamLog_settings_btn": {
+    "message": "Settings",
+    "description": "Button to open the Spam Filter settings page"
   },
   "SpamLog_filter_label": {
     "message": "Filter by Spam status",

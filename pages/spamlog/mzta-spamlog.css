@@ -25,6 +25,10 @@
     margin-bottom: 10px;
 }
 
+.btn_settings {
+    margin-right: auto;
+}
+
 .filter_div {
     width: 100%;
     display: flex;
