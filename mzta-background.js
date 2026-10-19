@@ -2604,6 +2604,16 @@ async function processEmails(args) {
                     }
                 }
                 if (!skipSpamFilter) {
+                    // Respect Thunderbird's built-in / custom message filters: if the
+                    // message has already been flagged as junk (message.junk === true),
+                    // a custom filter already handled it, so skip the AI spam check to
+                    // avoid duplicating effort. Junk-folder location alone does not
+                    // skip — only the explicit junk flag does.
+                    if (message.junk === true) {
+                        taLog.log("Message " + message.headerMessageId +
+                            " is already flagged as junk by a Thunderbird/custom filter, skipping AI spam analysis.");
+                        continue;
+                    }
                     // Collect the target now; actually analyze concurrently after the loop.
                     spamTargets.push({
                         headerMessageId: message.headerMessageId,

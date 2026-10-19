@@ -47,7 +47,10 @@ The check runs in this order:
 3. **Blocked domains** — is the sender's domain on your blocked list?
    - **Yes** → treat it as 100% spam: **permanently delete** the email, write one log entry, and stop.
    - **No** → continue.
-4. **AI scoring** — ask the AI to score the email from 0 to 100. It waits briefly first so your custom filters can run.
+4. **Already flagged by a custom filter** — if Thunderbird's built-in or a custom message filter already flagged the email as junk (`message.junk === true`), the custom filter has handled it, so skip the AI spam check entirely. Junk-*folder* location alone does **not** skip.
+   - **Yes** → skip AI analysis, no log entry.
+   - **No** → continue.
+5. **AI scoring** — ask the AI to score the email from 0 to 100. It waits briefly first so your custom filters can run.
 
 Finally, compare the score with your spam threshold:
 
