@@ -1357,19 +1357,31 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
         // (i.e. the AI determining the message is not spam) is never auto-blocked,
         // even when the user has configured the threshold to 0.
         const effectiveBlockThreshold = Math.max(report_data.SpamThreshold, 1);
-        if (options.autoMove && jsonObj.spamValue >= effectiveBlockThreshold && senderDomain) {
-            // Add domain to blocked list
-            let currentBlockedDomains = await browser.storage.sync.get({ spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains });
-            let blockedDomains = currentBlockedDomains.spamfilter_blocked_sender_domains || [];
-            if (!blockedDomains.includes(senderDomain)) {
-                blockedDomains.push(senderDomain);
-                blockedDomains = blockedDomains.sort();
-                await browser.storage.sync.set({ spamfilter_blocked_sender_domains: blockedDomains });
-                taLog.log("Auto-blocked sender domain: " + senderDomain);
+
+        // Purge the message based on the spam score alone. The purge must NOT be
+        // gated on senderDomain: a message can be clearly spam (spamValue >=
+        // effectiveBlockThreshold) even when the sender domain cannot be extracted
+        // (e.g. no '@' in the From address). Gating the purge on senderDomain left
+        // such messages in place despite exceeding the configured threshold.
+        const shouldPurge = options.autoMove && jsonObj.spamValue >= effectiveBlockThreshold;
+
+        if (shouldPurge) {
+            taLog.log("Marking as spam [" + headerMessageId + "]");
+            report_data.moved = true;
+
+            // Auto-block the sender domain only when a domain can be extracted.
+            if (senderDomain) {
+                let currentBlockedDomains = await browser.storage.sync.get({ spamfilter_blocked_sender_domains: prefs_default.spamfilter_blocked_sender_domains });
+                let blockedDomains = currentBlockedDomains.spamfilter_blocked_sender_domains || [];
+                if (!blockedDomains.includes(senderDomain)) {
+                    blockedDomains.push(senderDomain);
+                    blockedDomains = blockedDomains.sort();
+                    await browser.storage.sync.set({ spamfilter_blocked_sender_domains: blockedDomains });
+                    taLog.log("Auto-blocked sender domain: " + senderDomain);
+                }
+                report_data.explanation = browser.i18n.getMessage('spamfilter_auto_blocked_domain_explanation', senderDomain);
             }
 
-            taLog.log("Marking as spam [" + headerMessageId + "]");
-            report_data.explanation = browser.i18n.getMessage('spamfilter_auto_blocked_domain_explanation', senderDomain);
             try {
                 messenger.messages.update(message.id, { junk: true });
                 messenger.messages.delete([message.id], { deletePermanently: true });
@@ -1377,8 +1389,6 @@ async function _generateSpamReportForMessage(headerMessageId, options = {}) {
             } catch (e) {
                 taLog.warn("Message " + message.id + " was already deleted, skipping move/delete: " + e);
             }
-
-            report_data.moved = true;
         }
 
         // Final verification before persisting the report — the message may have been
